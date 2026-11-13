@@ -1,0 +1,105 @@
+<?php $bd = $cl["bd_item"]; $np = count($bd["panels_list"]);
+$gn_has_b = (bool) array_filter($bd["panels_list"], function ($pp) { return !empty($pp["bubbles"]); }); ?>
+<div class="timeline-container gn-bd<?php echo $gn_has_b ? " gn-conv-root" : ""; ?>" data-app="comics" id="gn-bd-reader" data-count="<?php echo $np; ?>">
+	<div class="timeline-header" data-el="tl-header">
+		<div class="timeline-header__topline"><div data-el="timeline-bs-notifs" class="timeline-bs-notifs"></div></div>
+		<div class="timeline-header__botline">
+			<div class="lp"><div class="nav-link-holder"><a href="<?php echo cl_link('bandes-dessinees'); ?>" data-spa="true">Bandes dessinées</a></div></div>
+			<div class="cp"><a href="<?php echo cl_link('/'); ?>"><img src="{%config site_logo%}" alt="Logo"></a></div>
+		</div>
+	</div>
+
+	<article class="gn-edu-doc gn-bd-doc">
+		<a class="gn-edu-doc__back" href="<?php echo cl_link('bandes-dessinees'); ?>" data-spa="true">← Toutes les bandes dessinées</a>
+		<span class="gn-edu-card__cat"><?php echo cl_edu_h($bd["category_label"]); ?></span><?php if ($gn_has_b): ?> <span class="gn-conv-badge">Avec bulles de conversation</span><?php endif; ?>
+		<h1><?php echo cl_edu_h($bd["title"]); ?></h1>
+		<p class="gn-edu-doc__sum"><?php echo cl_edu_h($bd["summary"]); ?></p>
+
+		<div class="gn-bd-bar" role="group" aria-label="Mode de lecture">
+			<button type="button" class="gn-bd-mode on" data-mode="step">Case par case</button>
+			<button type="button" class="gn-bd-mode" data-mode="scroll">Défilement</button>
+		</div>
+
+		<?php if ($gn_has_b) { echo cl_template("comics/bubbles-tools"); } ?>
+		<ol class="gn-bd-panels is-step">
+			<?php foreach ($bd["panels_list"] as $i => $p): ?>
+				<li class="gn-bd-panel <?php echo $i === 0 ? 'is-on' : ''; ?>" data-i="<?php echo $i; ?>">
+					<figure>
+						<?php $gn_b = !empty($p["bubbles"]); if ($p["image_url"] !== ""): ?>
+						<?php if ($gn_b): ?><div class="gn-conv-stage" data-bubbles="<?php echo cl_edu_h(json_encode($p["bubbles"], JSON_UNESCAPED_UNICODE)); ?>"><?php endif; ?>
+						<img src="<?php echo cl_edu_h($p['image_url']); ?>" width="1200" height="900" decoding="async"<?php echo $i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'; ?> alt="<?php echo cl_edu_h($p['alt'] !== '' ? $p['alt'] : ('Case ' . ($i + 1) . ' : ' . $p['caption'])); ?>" loading="<?php echo $i === 0 ? 'eager' : 'lazy'; ?>" decoding="async">
+						<?php if ($gn_b): ?></div><?php endif; endif; ?>
+						<?php if ($gn_b): $gn_alt = cl_conv_alt($p, $i + 1); ?><p class="gn-sr"><?php echo cl_edu_h($gn_alt); ?></p><noscript><p class="gn-conv-text"><?php echo cl_edu_h($gn_alt); ?></p></noscript><?php endif; ?>
+						<?php if ($p["dialogue"] !== ""): ?><blockquote class="gn-bd-say"><?php echo nl2br(cl_edu_h($p["dialogue"]), false); ?></blockquote><?php endif; ?>
+						<?php if ($p["caption"] !== ""): ?><figcaption><span class="gn-bd-n"><?php echo $i + 1; ?></span> <?php echo cl_edu_h($p["caption"]); ?></figcaption><?php endif; ?>
+					</figure>
+				</li>
+			<?php endforeach; ?>
+		</ol>
+
+		<div class="gn-bd-nav" role="group" aria-label="Navigation entre les cases">
+			<button type="button" class="btn btn-custom main-outline md" data-bd="prev">← Précédente</button>
+			<span class="gn-bd-count" aria-live="polite">Case <b>1</b> sur <?php echo $np; ?></span>
+			<button type="button" class="btn btn-custom main-inline md" data-bd="next">Suivante →</button>
+		</div>
+
+		<aside class="gn-edu__help">
+			<div><b>Cette histoire vous parle ?</b><span>Vous pouvez en parler : créez une alerte, l’équipe GANXÔ vous écoute et vous oriente.</span></div>
+			<a class="btn btn-custom main-inline md" href="<?php echo cl_link('alert'); ?>" data-spa="true">Créer une alerte VBG</a>
+		</aside>
+	</article>
+
+	<?php if (not_empty($cl["bd_others"])): ?>
+		<section class="gn-edu-more" aria-label="Autres bandes dessinées">
+			<h2>À lire ensuite</h2>
+			<ul class="gn-edu__grid">
+				<?php foreach ($cl["bd_others"] as $c): ?>
+					<li><article class="gn-edu-card"><a class="gn-edu-card__link" href="<?php echo $c['url']; ?>" data-spa="true">
+						<span class="gn-edu-card__img gn-edu-card__img--bd"><?php if ($c["cover_url"] !== ""): ?><img src="<?php echo cl_edu_h($c['cover_url']); ?>" width="1200" height="900" alt="" loading="lazy" decoding="async"><?php endif; ?></span>
+						<span class="gn-edu-card__body"><span class="gn-edu-card__title"><?php echo cl_edu_h($c["title"]); ?></span></span>
+					</a></article></li>
+				<?php endforeach; ?>
+			</ul>
+		</section>
+	<?php endif; ?>
+
+	<script>
+	(function () {
+		var root = document.getElementById('gn-bd-reader');
+		if (!root) { return; }
+		var list = root.querySelector('.gn-bd-panels'), panels = [].slice.call(list.querySelectorAll('.gn-bd-panel'));
+		var prev = root.querySelector('[data-bd="prev"]'), next = root.querySelector('[data-bd="next"]'), count = root.querySelector('.gn-bd-count b');
+		var nav = root.querySelector('.gn-bd-nav'), modes = [].slice.call(root.querySelectorAll('.gn-bd-mode')), cur = 0, mode = 'step';
+		function show(i) {
+			cur = Math.max(0, Math.min(panels.length - 1, i));
+			panels.forEach(function (p, k) { p.classList.toggle('is-on', k === cur); });
+			count.textContent = cur + 1;
+			root.dispatchEvent(new CustomEvent('gn:panel', {detail: cur}));
+			prev.disabled = cur === 0; next.disabled = cur === panels.length - 1;
+		}
+		function setMode(m) {
+			mode = m;
+			list.classList.toggle('is-step', m === 'step');
+			nav.hidden = m !== 'step';
+			modes.forEach(function (b) { b.classList.toggle('on', b.dataset.mode === m); b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
+			if (m === 'step') { show(cur); }
+		}
+		prev.addEventListener('click', function () { show(cur - 1); });
+		next.addEventListener('click', function () { show(cur + 1); });
+		modes.forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
+		root.addEventListener('keydown', function (e) {
+			if (mode !== 'step') { return; }
+			if (e.key === 'ArrowRight') { show(cur + 1); } else if (e.key === 'ArrowLeft') { show(cur - 1); }
+		});
+		if (root.classList.contains('gn-conv-root')) {
+			var base = '<?php echo cl_link("themes/default/statics/ganho/"); ?>'.replace(/\/?$/, '/');
+			var ver = '?v=<?php echo @filemtime(cl_full_path("themes/default/statics/ganho/js/gn-conv.js")); ?>';
+			if (!document.getElementById('gn-conv-css')) { var l = document.createElement('link'); l.id = 'gn-conv-css'; l.rel = 'stylesheet'; l.href = base + 'css/gn-conv.css' + ver; document.head.appendChild(l); }
+			if (window.GNConv) { window.GNConv.mount(root); }
+			else { var sc = document.createElement('script'); sc.src = base + 'js/gn-conv.js' + ver; sc.onload = function () { window.GNConv.mount(root); }; document.head.appendChild(sc); }
+		}
+		root.tabIndex = -1;
+		setMode('step');
+	})();
+	</script>
+</div>

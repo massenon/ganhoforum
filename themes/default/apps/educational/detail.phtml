@@ -1,0 +1,52 @@
+<?php $it = $cl["edu_item"]; ?>
+<div class="timeline-container gn-edu" data-app="educational">
+	<div class="timeline-header" data-el="tl-header">
+		<div class="timeline-header__topline"><div data-el="timeline-bs-notifs" class="timeline-bs-notifs"></div></div>
+		<div class="timeline-header__botline">
+			<div class="lp"><div class="nav-link-holder"><a href="<?php echo cl_link('contenus-educatifs'); ?>" data-spa="true">Contenus éducatifs</a></div></div>
+			<div class="cp"><a href="<?php echo cl_link('/'); ?>"><img src="{%config site_logo%}" alt="Logo"></a></div>
+		</div>
+	</div>
+
+	<article class="gn-edu-doc">
+		<a class="gn-edu-doc__back" href="<?php echo cl_link('contenus-educatifs'); ?>" data-spa="true">← Tous les contenus</a>
+		<a class="gn-edu-card__cat" href="<?php echo cl_link('contenus-educatifs?cat=' . $it['category']); ?>" data-spa="true"><?php echo cl_edu_h($it["category_label"]); ?></a>
+		<h1><?php echo cl_edu_h($it["title"]); ?></h1>
+		<p class="gn-edu-doc__sum"><?php echo cl_edu_h($it["summary"]); ?></p>
+		<p class="gn-edu-card__meta"><?php echo cl_edu_h($it["audience_label"]); ?> · <?php echo $it["minutes"]; ?> min de lecture · Mis à jour le <?php echo $it["date_fr"]; ?></p>
+
+		<?php if ($it["image_url"] !== ""): ?>
+			<figure class="gn-edu-doc__fig"><img src="<?php echo cl_edu_h($it['image_url']); ?>" alt="" loading="lazy" decoding="async"></figure>
+		<?php endif; ?>
+
+		<?php if (count($cl["edu_toc"]) >= 3): ?>
+			<nav class="gn-edu-doc__toc" aria-label="Dans cette fiche">
+				<b>Dans cette fiche</b>
+				<ol><?php foreach ($cl["edu_toc"] as $t): ?><li><a href="#<?php echo $t[0]; ?>" onclick="var e=document.getElementById('<?php echo $t[0]; ?>'); if(e){e.scrollIntoView({behavior:'smooth',block:'start'});} return false;"><?php echo cl_edu_h($t[1]); ?></a></li><?php endforeach; ?></ol>
+			</nav>
+		<?php endif; ?>
+
+		<div class="gn-edu-doc__body"><?php echo $it["html"]; ?></div>
+
+		<aside class="gn-edu__help">
+			<div><b>Vous vous reconnaissez dans cette fiche ?</b><span>Vous n’êtes pas seul·e. Créez une alerte VBG pour être écouté·e et orienté·e par l’équipe GANXÔ.</span></div>
+			<a class="btn btn-custom main-inline md" href="<?php echo cl_link('alert'); ?>" data-spa="true">Créer une alerte VBG</a>
+		</aside>
+	</article>
+
+	<?php if (not_empty($cl["edu_related"])): ?>
+		<section class="gn-edu-more" aria-label="À lire aussi">
+			<h2>À lire aussi</h2>
+			<ul class="gn-edu__grid">
+				<?php foreach ($cl["edu_related"] as $r): ?>
+					<li><article class="gn-edu-card"><a class="gn-edu-card__link" href="<?php echo $r['url']; ?>" data-spa="true">
+						<span class="gn-edu-card__body">
+							<span class="gn-edu-card__cat"><?php echo cl_edu_h($r["category_label"]); ?></span>
+							<span class="gn-edu-card__title"><?php echo cl_edu_h($r["title"]); ?></span>
+							<span class="gn-edu-card__sum"><?php echo cl_edu_h($r["summary"]); ?></span>
+						</span></a></article></li>
+				<?php endforeach; ?>
+			</ul>
+		</section>
+	<?php endif; ?>
+</div>

@@ -1,0 +1,54 @@
+<form class="gx-form" id="cl-login-vue-app" v-on:submit="submit_form($event)" novalidate>
+	<h2 class="gx-card__title">Content de vous revoir</h2>
+	<p class="gx-card__sub">Connectez-vous avec votre adresse e-mail ou votre nom d'utilisateur.</p>
+
+	<div class="gx-errsum" v-cloak v-if="show_summary" ref="summary" tabindex="-1" aria-labelledby="login-errsum-title">
+		<p class="gx-errsum__title" id="login-errsum-title" v-text="errors.length > 1 ? 'Veuillez corriger ' + errors.length + ' erreurs' : 'Veuillez corriger une erreur'">Veuillez corriger l'erreur</p>
+		<ul>
+			<li v-for="err in errors"><a v-bind:href="'#' + err.id" v-on:click.prevent="focus_field(err.id)">{{ err.msg }}</a></li>
+		</ul>
+	</div>
+
+	<div class="gx-field">
+		<label for="login-email">Adresse e-mail ou nom d'utilisateur</label>
+		<input id="login-email" placeholder="vous@exemple.org ou votre pseudo" name="email" v-model.trim.lazy="$v.email.$model" type="text" class="gx-input" autocomplete="username" autocapitalize="none" spellcheck="false" aria-required="true" v-bind:aria-invalid="err_email ? 'true' : 'false'" v-bind:aria-describedby="err_email ? 'login-email-err' : null">
+		<p class="gx-err" id="login-email-err" v-cloak v-if="err_email">{{ err_email }}</p>
+	</div>
+
+	<div class="gx-field">
+		<label for="login-password">Mot de passe</label>
+		<div class="gx-pass">
+			<input id="login-password" placeholder="Votre mot de passe" name="password" v-model.trim="$v.password.$model" v-bind:type="password_display" class="gx-input" autocomplete="current-password" aria-required="true" v-bind:aria-invalid="err_password ? 'true' : 'false'" v-bind:aria-describedby="err_password ? 'login-password-err' : null">
+			<button type="button" class="gx-eye" v-on:click="password_display_toggle" v-bind:aria-pressed="password_display == 'text' ? 'true' : 'false'" aria-controls="login-password" v-text="password_display == 'password' ? 'Afficher' : 'Masquer'">Afficher</button>
+		</div>
+		<p class="gx-err" id="login-password-err" v-cloak v-if="err_password">{{ err_password }}</p>
+	</div>
+
+	<div class="gx-row-opts">
+		<div class="gx-check">
+			<input type="checkbox" id="login-remember" name="remember" value="1" checked>
+			<label for="login-remember">Rester connecté·e</label>
+		</div>
+		<a href="<?php echo cl_link('guest?auth=forgot_pass'); ?>">Mot de passe oublié ?</a>
+	</div>
+
+	<button type="submit" class="gn-btn gn-btn--primary gn-btn--lg gx-submit" v-bind:disabled="submitting || done" v-bind:aria-busy="submitting ? 'true' : 'false'" v-text="done ? 'Connexion réussie, redirection…' : (submitting ? 'Veuillez patienter…' : 'Se connecter')">Se connecter</button>
+
+	<?php if (in_array("on", array($cl["config"]["facebook_oauth"], $cl["config"]["google_oauth"], $cl["config"]["twitter_oauth"]))): ?>
+		<p class="gx-or"><span>ou continuer avec</span></p>
+		<div class="gx-social">
+			<?php if ($cl["config"]["google_oauth"] == "on"): ?>
+				<a class="gn-btn gn-btn--ghost" href="<?php echo cl_link('oauth/google'); ?>">Google</a>
+			<?php endif; ?>
+			<?php if ($cl["config"]["facebook_oauth"] == "on"): ?>
+				<a class="gn-btn gn-btn--ghost" href="<?php echo cl_link('oauth/facebook'); ?>">Facebook</a>
+			<?php endif; ?>
+			<?php if ($cl["config"]["twitter_oauth"] == "on"): ?>
+				<a class="gn-btn gn-btn--ghost" href="<?php echo cl_link('oauth/twitter'); ?>">Twitter</a>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
+
+	<p class="gx-switch">Pas encore de compte ? <a href="<?php echo cl_link('guest?auth=signup'); ?>" data-gx-tab="signup">Créer un compte</a></p>
+	<input type="hidden" class="d-none" value="<?php echo fetch_or_get($cl['csrf_token'],'none'); ?>" name="hash">
+</form>

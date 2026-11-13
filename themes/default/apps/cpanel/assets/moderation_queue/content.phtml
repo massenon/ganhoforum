@@ -1,0 +1,101 @@
+<div class="cp-app-container gn-cmp gn-adm" data-app="moderation-queue" id="vue-adm-queue" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>File des signalements</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Modération renforcée</a></li>
+            </ol>
+        </div>
+        <div class="rp"><div class="gn-seg" role="group" aria-label="Filtre"><button type="button" v-bind:class="{on: show === 'pending'}" v-on:click="set_show('pending')">En attente <b>{{ pending }}</b></button><button type="button" v-bind:class="{on: show === 'done'}" v-on:click="set_show('done')">Traités</button></div></div>
+    </div>
+
+    <p class="gn-adm-help">Signalements de publications et de comptes, classés par urgence (plusieurs signalements sur la même cible = plus urgent). Chaque action est enregistrée dans le <a href="<?php echo cl_link('admin_panel/audit_log'); ?>">journal d’audit</a>.</p>
+
+    <div class="gn-adm-list">
+        <article class="gn-adm-item" v-for="it in items" v-bind:key="it.key" v-bind:class="'gn-adm-item--' + it.urgency">
+            <div class="gn-adm-item__head">
+                <span class="gn-badge" v-bind:class="'gn-badge--u-' + it.urgency">{{ urgency_label(it.urgency) }}</span>
+                <span class="gn-badge">{{ it.kind === 'pub' ? 'Publication' : 'Profil' }}</span>
+                <b>@{{ it.who }}</b>
+                <span class="gn-adm-muted">signalé par {{ it.reporter }} · {{ it.time_fr }}<span v-if="it.count > 1"> · {{ it.count }} signalements</span></span>
+                <span class="gn-badge gn-badge--sent" v-if="it.hidden">Masquée</span>
+            </div>
+            <p class="gn-adm-quote" v-if="it.preview">{{ it.preview }}</p>
+            <p class="gn-adm-muted" v-if="it.comment">Motif : {{ it.comment }}</p>
+            <div class="gn-adm-item__act" v-if="show === 'pending'">
+                <a class="btn btn-default" v-if="it.url" v-bind:href="it.url" target="_blank" rel="noopener">Voir le contexte</a>
+                <button type="button" class="btn btn-default" v-on:click="act(it, 'approve')">Approuver (classer)</button>
+                <button type="button" class="btn btn-default" v-if="it.kind === 'pub' && !it.hidden" v-on:click="act(it, 'hide')">Masquer le message</button>
+                <button type="button" class="btn btn-default" v-if="it.kind === 'pub' && it.hidden" v-on:click="act(it, 'show')">Rétablir</button>
+                <button type="button" class="btn btn-default" v-on:click="ask(it, 'warn')">Avertir</button>
+                <button type="button" class="btn btn-default" v-on:click="ask(it, 'suspend')">Suspendre</button>
+                <button type="button" class="btn gn-btn-danger" v-on:click="ask(it, 'ban')">Bannir</button>
+            </div>
+        </article>
+        <p class="gn-cmp-empty" v-if="!items.length">{{ show === 'pending' ? 'Aucun signalement en attente. Bravo à l’équipe.' : 'Aucun signalement traité pour le moment.' }}</p>
+    </div>
+
+    <div class="card" v-if="flagged.length">
+        <div class="header"><h2>Publications contenant un mot surveillé</h2></div>
+        <div class="body">
+            <article class="gn-adm-item gn-adm-item--mid" v-for="f in flagged" v-bind:key="'f' + f.id">
+                <div class="gn-adm-item__head"><span class="gn-badge gn-badge--scheduled">« {{ f.word }} »</span><b>@{{ f.who }}</b><span class="gn-adm-muted">{{ f.time_fr }}</span></div>
+                <p class="gn-adm-quote">{{ f.preview }}</p>
+                <div class="gn-adm-item__act"><a class="btn btn-default" v-bind:href="f.url" target="_blank" rel="noopener">Voir le contexte</a><button type="button" class="btn btn-default" v-on:click="hide_flag(f)">Masquer le message</button></div>
+            </article>
+        </div>
+    </div>
+
+    <div class="gn-drawer gn-drawer--center" v-if="dlg.open" role="dialog" aria-modal="true" aria-labelledby="gn-q-t">
+        <div class="gn-drawer__backdrop" v-on:click="dlg.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-q-t">{{ dlg_title }}</h3>
+            <p class="gn-cmp-err" role="alert" v-if="dlg.err">{{ dlg.err }}</p>
+            <div class="gn-field" v-if="dlg.type === 'suspend'"><label for="q-days">Durée de la suspension</label><select id="q-days" v-model.number="dlg.days"><option v-bind:value="1">1 jour</option><option v-bind:value="7">7 jours</option><option v-bind:value="30">30 jours</option></select></div>
+            <div class="gn-field"><label for="q-reason">Motif (conservé dans le journal d’audit)</label><textarea id="q-reason" rows="3" maxlength="300" v-model="dlg.reason"></textarea></div>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="dlg.open = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn" v-bind:class="dlg.type === 'ban' ? 'gn-btn-danger' : 'btn-primary'" v-bind:disabled="busy" v-on:click="confirm">Confirmer</button></div>
+        </div>
+    </div>
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<script>
+	"use strict";
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+		function call(a, d) { return $.ajax({url: API + a, type: 'POST', data: d || {}, dataType: 'json'}); }
+		SMC_CPanel.QUEUE = new Vue({
+			el: '#vue-adm-queue',
+			data: {items: [], flagged: [], pending: 0, show: 'pending', dlg: {open: false, item: null, type: '', reason: '', days: 7, err: ''}, busy: false, toast: ''},
+			computed: {
+				dlg_title: function() { var t = {warn: 'Envoyer un avertissement', suspend: 'Suspendre le compte', ban: 'Bannir le compte'}; return t[this.dlg.type] || ''; }
+			},
+			created: function() { this.load(); },
+			methods: {
+				say: function(t) { var _this = this; this.toast = t; setTimeout(function() { _this.toast = ''; }, 3200); },
+				urgency_label: function(u) { return u === 'high' ? 'Urgent' : (u === 'mid' ? 'À surveiller' : 'Normal'); },
+				set_show: function(s) { this.show = s; this.load(); },
+				load: function() {
+					var _this = this;
+					call('adm_queue', {show: this.show}).done(function(d) { if (d.status === 200) { _this.items = d.items; _this.flagged = d.flagged; _this.pending = d.pending; } });
+				},
+				act: function(it, a, extra) {
+					var _this = this, p = $.extend({kind: it.kind, id: it.id, act: a}, extra || {});
+					return call('adm_queue_act', p).done(function(d) {
+						if (d.status === 200) { _this.say('Action enregistrée.'); _this.load(); } else { _this.say(d.message || 'Action impossible.'); }
+					});
+				},
+				ask: function(it, t) { this.dlg = {open: true, item: it, type: t, reason: '', days: 7, err: ''}; },
+				confirm: function() {
+					var _this = this; this.busy = true;
+					this.act(this.dlg.item, this.dlg.type, {reason: this.dlg.reason, days: this.dlg.days}).always(function() { _this.busy = false; _this.dlg.open = false; });
+				},
+				hide_flag: function(f) {
+					var _this = this;
+					call('adm_flag_hide', {id: f.id}).done(function() { _this.say('Message masqué.'); _this.load(); });
+				}
+			}
+		});
+	});
+</script>

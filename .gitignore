@@ -1,0 +1,23 @@
+# Secrets et configuration locale
+core/settings.php
+
+# Journaux
+error_log
+*.log
+core/logs/*
+!core/logs/.htaccess
+
+# Données des membres (jamais publiées)
+upload/*
+!upload/default/
+!upload/index.html
+
+# Sauvegardes et dumps
+site_backups/*
+!site_backups/index.html
+*.sql
+*.zip
+
+# Divers
+.DS_Store
+Thumbs.db

@@ -1,0 +1,88 @@
+<script>
+	"use strict";
+
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+
+		function call(action, data) {
+			return $.ajax({url: API + action, type: 'POST', data: data || {}, dataType: 'json'});
+		}
+		function blank() {
+			return {id: 0, title: '', category: '', audience: 'all', summary: '', body: '', image: '', status: 'draft', pinned: false};
+		}
+
+		SMC_CPanel.EDU = new Vue({
+			el: '#vue-edu-app',
+			data: {
+				items: <?php echo cl_minify_js(json($cl["edu_items"], true)); ?>,
+				categories: <?php echo cl_minify_js(json($cl["edu_categories"], true)); ?>,
+				audiences: <?php echo cl_minify_js(json($cl["edu_audiences"], true)); ?>,
+				f: {q: '', category: '', status: ''},
+				drawer: false,
+				form: blank(),
+				err: {message: '', field: ''},
+				busy: false,
+				del: {open: false, item: null},
+				toast: ''
+			},
+			computed: {
+				filtered: function() {
+					var f = this.f, q = f.q.toLowerCase();
+					return this.items.filter(function(it) {
+						return (!f.category || it.category === f.category) && (!f.status || it.status === f.status) &&
+							(!q || (it.title + ' ' + it.summary).toLowerCase().indexOf(q) !== -1);
+					});
+				}
+			},
+			methods: {
+				say: function(t) { var _this = this; this.toast = t; setTimeout(function() { _this.toast = ''; }, 3500); },
+				count_status: function(s) { return this.items.filter(function(i) { return i.status === s; }).length; },
+				open_new: function() { this.form = blank(); this.err = {message: '', field: ''}; this.drawer = true; },
+				open_edit: function(it) {
+					this.form = {id: it.id, title: it.title, category: it.category, audience: it.audience, summary: it.summary, body: it.body, image: it.image, status: it.status, pinned: !!it.pinned};
+					this.err = {message: '', field: ''}; this.drawer = true;
+				},
+				close_drawer: function() { if (!this.busy) { this.drawer = false; } },
+				fmt: function(pre, post, ph) {
+					var ta = this.$refs.body, f = this.form, s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+					var sel = f.body.slice(s, e) || ph, lead = (s > 0 && f.body.charAt(s - 1) !== '\n' && pre.charAt(0) !== '*') ? '\n' : '';
+					f.body = f.body.slice(0, s) + lead + pre + sel + post + f.body.slice(e);
+					var pos = s + lead.length + pre.length;
+					this.$nextTick(function() { ta.focus(); ta.selectionStart = pos; ta.selectionEnd = pos + sel.length; });
+				},
+				upload: function(ev) {
+					var _this = this, file = ev.target.files && ev.target.files[0];
+					if (!file) { return; }
+					var fd = new FormData(); fd.append('file', file);
+					$.ajax({url: API + 'edu_upload', type: 'POST', data: fd, processData: false, contentType: false, dataType: 'json'}).done(function(d) {
+						if (d.status === 200) { _this.form.image = d.path; _this.say('Image envoyée.'); } else { _this.err = {message: d.message || 'Envoi impossible.', field: 'image'}; }
+					}).fail(function() { _this.err = {message: 'Erreur réseau.', field: 'image'}; });
+					ev.target.value = '';
+				},
+				save: function() {
+					var _this = this, f = this.form;
+					this.err = {message: '', field: ''}; this.busy = true;
+					call('edu_item_save', {id: f.id, title: f.title, category: f.category, audience: f.audience, summary: f.summary, body: f.body, image: f.image, status: f.status, pinned: f.pinned ? 1 : 0}).done(function(d) {
+						_this.busy = false;
+						if (d.status === 200) { _this.items = d.items; _this.drawer = false; _this.say(f.status === 'published' ? 'Fiche enregistrée et publiée.' : 'Brouillon enregistré.'); }
+						else { _this.err = {message: d.message || 'Enregistrement impossible.', field: d.field || ''}; }
+					}).fail(function() { _this.busy = false; _this.err = {message: 'Erreur réseau.', field: ''}; });
+				},
+				toggle: function(it) {
+					var _this = this;
+					call('edu_item_toggle', {id: it.id}).done(function(d) {
+						if (d.status === 200) { _this.items = d.items; _this.say('Statut mis à jour.'); } else { _this.say(d.message || 'Action impossible.'); }
+					});
+				},
+				duplicate: function(it) {
+					var _this = this;
+					call('edu_item_duplicate', {id: it.id}).done(function(d) { if (d.status === 200) { _this.items = d.items; _this.say('Fiche dupliquée en brouillon.'); } });
+				},
+				do_delete: function() {
+					var _this = this, it = this.del.item;
+					call('edu_item_delete', {id: it.id}).done(function(d) { _this.del.open = false; if (d.status === 200) { _this.items = d.items; _this.say('Fiche supprimée.'); } });
+				}
+			}
+		});
+	});
+</script>

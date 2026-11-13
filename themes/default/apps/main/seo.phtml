@@ -1,0 +1,230 @@
+<?php
+# @*************************************************************************@
+# @ Ganho Forum : SEO head (title, description, canonical, robots, Open      @
+# @ Graph, Twitter Card, JSON-LD). Included once from main/content.phtml.    @
+# @*************************************************************************@
+
+if (!function_exists('gn_seo_clip')) {
+	function gn_seo_clip($text, $max) {
+		$text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $text), ENT_QUOTES, 'UTF-8')));
+
+		if (mb_strlen($text, 'UTF-8') <= $max) {
+			return $text;
+		}
+
+		$cut  = mb_substr($text, 0, $max - 1, 'UTF-8');
+		$last = mb_strrpos($cut, ' ', 0, 'UTF-8');
+
+		if ($last !== false && $last > ($max * 0.6)) {
+			$cut = mb_substr($cut, 0, $last, 'UTF-8');
+		}
+
+		return rtrim($cut, " ,;:.-") . "\xE2\x80\xA6";
+	}
+
+	function gn_seo_e($text) {
+		return htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
+	}
+}
+
+$gn_base   = rtrim($cl["config"]["url"], "/");
+$gn_site   = fetch_or_get($cl["config"]["name"], "Forum Ganho");
+$gn_pn     = fetch_or_get($cl["pn"], "none");
+$gn_auth   = fetch_or_get($cl["auth_type"], "login");
+$gn_img    = $gn_base . "/themes/" . $cl["config"]["theme"] . "/statics/ganho/img/og-default-1200x630.png";
+$gn_img_ok = true; // true = the default 1200x630 image (dimensions known)
+$gn_img_alt = "Forum Ganho, la communauté LGBTQ : authentique, sans excuses";
+$gn_generic_desc = "Forum Ganho : un espace bienveillant pour la communauté lesbienne, gay, bi, trans, queer, intersexe et alliée. Rencontrez et partagez en confiance.";
+
+# ---- Public / private decision --------------------------------------------
+$gn_robots = "noindex,nofollow";
+$gn_hide   = false; // true = generic meta (no names, no avatar, no query)
+$gn_og_type = "website";
+
+if ($gn_pn == "guest") {
+	$gn_robots = "noindex,follow";
+}
+else if ($gn_pn == "stat_pages") {
+	$gn_robots = "index,follow";
+}
+else if (in_array($gn_pn, array("profile", "connections"))) {
+	$gn_hide   = true;
+	$gn_robots = "noindex,nofollow";
+
+	if ($gn_pn == "profile" && fetch_or_get($cl['prof_user']['index_privacy'], "N") == "Y" && fetch_or_get($cl['prof_user']['profile_privacy'], "everyone") == "everyone") {
+		$gn_hide    = false;
+		$gn_robots  = "index,follow";
+		$gn_og_type = "profile";
+	}
+}
+else if ($gn_pn == "thread") {
+	$gn_og_type = "article";
+	$gn_robots  = "noindex,follow";
+	$gn_tpost   = fetch_or_get($cl['thread_data']['post'], array());
+
+	if (not_empty($gn_tpost) && fetch_or_get($gn_tpost['priv_wcs'], "everyone") == "everyone" && fetch_or_get($gn_tpost['status'], "active") == "active") {
+		$gn_owner = cl_db_get_item(T_USERS, array("id" => intval($gn_tpost['owner']['id'])));
+
+		if (not_empty($gn_owner) && fetch_or_get($gn_owner['index_privacy'], "N") == "Y" && fetch_or_get($gn_owner['profile_privacy'], "everyone") == "everyone") {
+			$gn_robots = "index,follow";
+		}
+	}
+}
+else if (in_array($gn_pn, array("conversation", "search", "chats", "notifications", "settings", "wallet", "ads", "ad_item", "affiliates", "start_up", "confirm_reg", "confirm_email", "cpanel"))) {
+	$gn_hide = true;
+}
+else if (in_array($gn_pn, array("err404", "err500"))) {
+	$gn_robots = "noindex,follow";
+}
+
+# ---- Title, description ---------------------------------------------------
+$gn_title = trim(preg_replace('/\s+/u', ' ', strip_tags(fetch_or_get($cl["page_title"], $cl["config"]["title"]))));
+$gn_desc  = fetch_or_get($cl["page_desc"], "");
+
+if ($gn_hide) {
+	$gn_og_title = $gn_site;
+	$gn_desc     = $gn_generic_desc;
+}
+else {
+	if ($gn_pn == "stat_pages" || $gn_pn == "err404" || $gn_pn == "err500") {
+		$gn_desc = $gn_generic_desc;
+	}
+
+	if (mb_stripos($gn_title, "forum", 0, "UTF-8") === false && mb_strlen($gn_title . " | " . $gn_site, "UTF-8") <= 60) {
+		$gn_title .= " | " . $gn_site;
+	}
+
+	$gn_og_title = $gn_title;
+}
+
+$gn_title    = gn_seo_clip($gn_title, 60);
+$gn_og_title = gn_seo_clip($gn_og_title, 70);
+$gn_desc     = gn_seo_clip(($gn_desc ? $gn_desc : $gn_generic_desc), 155);
+
+# ---- Canonical URL (never keeps tokens or private query strings) ----------
+$gn_path = parse_url(fetch_or_get($_SERVER['REQUEST_URI'], "/"), PHP_URL_PATH);
+$gn_path = ($gn_path === null || $gn_path === false) ? "/" : $gn_path;
+$gn_path = ($gn_path === "/" ? "/" : rtrim($gn_path, "/"));
+
+if ($gn_pn == "guest") {
+	$gn_canon = $gn_base . "/guest" . (in_array($gn_auth, array("signup", "forgot_pass")) ? "?auth=" . $gn_auth : "");
+}
+else if ($gn_pn == "thread" && not_empty($cl["page_url"])) {
+	$gn_canon = $cl["page_url"];
+}
+else if ($gn_hide) {
+	$gn_canon = $gn_base . $gn_path;
+}
+else {
+	$gn_canon = $gn_base . $gn_path;
+}
+
+# ---- Image ----------------------------------------------------------------
+if (!$gn_hide && $gn_pn == "thread" && not_empty($cl["page_image"])) {
+	$gn_img    = $cl["page_image"];
+	$gn_img_ok = false;
+	$gn_img_alt = "Image de la publication";
+}
+
+$gn_theme_url = $gn_base . "/themes/" . $cl["config"]["theme"];
+?>
+<title><?php if (not_empty($me['new_notifs'])) { echo "(" . intval($me['new_notifs']) . ") "; } echo gn_seo_e($gn_title); ?></title>
+<meta name="description" content="<?php echo gn_seo_e($gn_desc); ?>">
+<meta name="robots" content="<?php echo $gn_robots; ?>">
+<link rel="canonical" href="<?php echo gn_seo_e($gn_canon); ?>">
+<?php if ($gn_pn != "guest"): ?>
+<link rel="alternate" hreflang="fr" href="<?php echo gn_seo_e($gn_canon); ?>">
+<?php endif; ?>
+<link rel="alternate" hreflang="x-default" href="<?php echo gn_seo_e($gn_canon); ?>">
+
+<meta property="og:type" content="<?php echo $gn_og_type; ?>">
+<meta property="og:site_name" content="<?php echo gn_seo_e($gn_site); ?>">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="<?php echo gn_seo_e($gn_og_title); ?>">
+<meta property="og:description" content="<?php echo gn_seo_e($gn_desc); ?>">
+<meta property="og:url" content="<?php echo gn_seo_e($gn_canon); ?>">
+<meta property="og:image" content="<?php echo gn_seo_e($gn_img); ?>">
+<?php if (strpos($gn_img, "https://") === 0): ?>
+<meta property="og:image:secure_url" content="<?php echo gn_seo_e($gn_img); ?>">
+<?php endif; ?>
+<?php if ($gn_img_ok): ?>
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<?php endif; ?>
+<meta property="og:image:alt" content="<?php echo gn_seo_e($gn_img_alt); ?>">
+<meta name="twitter:card" content="<?php echo ($gn_img_ok ? "summary_large_image" : "summary"); ?>">
+<meta name="twitter:title" content="<?php echo gn_seo_e($gn_og_title); ?>">
+<meta name="twitter:description" content="<?php echo gn_seo_e($gn_desc); ?>">
+<meta name="twitter:image" content="<?php echo gn_seo_e($gn_img); ?>">
+<meta name="twitter:image:alt" content="<?php echo gn_seo_e($gn_img_alt); ?>">
+<?php
+# ---- JSON-LD (public pages and the guest page only, no private data) -------
+if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread"):
+	$gn_org_id  = $gn_base . "/#organization";
+	$gn_site_id = $gn_base . "/#website";
+	$gn_crumbs  = array(array("name" => $gn_site, "url" => $gn_base . "/"));
+
+	if ($gn_pn == "guest") {
+		$gn_crumbs[] = array("name" => "Connexion et inscription", "url" => $gn_base . "/guest");
+	}
+	else if ($gn_pn == "stat_pages") {
+		$gn_crumbs[] = array("name" => gn_seo_clip(fetch_or_get($cl["page_title"], ""), 60), "url" => $gn_canon);
+	}
+	else {
+		$gn_crumbs[] = array("name" => "Discussion", "url" => $gn_canon);
+	}
+
+	$gn_list = array();
+
+	foreach ($gn_crumbs as $i => $c) {
+		$gn_list[] = array("@type" => "ListItem", "position" => $i + 1, "name" => $c["name"], "item" => $c["url"]);
+	}
+
+	$gn_page_type = ($gn_pn == "stat_pages" && stripos($gn_canon, "about_us") !== false) ? "AboutPage" : "WebPage";
+
+	$gn_ld = array(
+		"@context" => "https://schema.org",
+		"@graph"   => array(
+			array(
+				"@type" => "Organization",
+				"@id"   => $gn_org_id,
+				"name"  => "GANX\xC3\x94",
+				"alternateName" => $gn_site,
+				"url"   => $gn_base . "/",
+				"logo"  => array(
+					"@type"  => "ImageObject",
+					"url"    => $gn_theme_url . "/statics/ganho/img/logo-couleur-416w.png",
+					"width"  => 416,
+					"height" => 132
+				)
+			),
+			array(
+				"@type" => "WebSite",
+				"@id"   => $gn_site_id,
+				"url"   => $gn_base . "/",
+				"name"  => $gn_site,
+				"inLanguage" => "fr-FR",
+				"publisher"  => array("@id" => $gn_org_id)
+			),
+			array(
+				"@type" => $gn_page_type,
+				"@id"   => $gn_canon . "#webpage",
+				"url"   => $gn_canon,
+				"name"  => $gn_og_title,
+				"description" => $gn_desc,
+				"inLanguage"  => "fr-FR",
+				"isPartOf"    => array("@id" => $gn_site_id),
+				"breadcrumb"  => array("@id" => $gn_canon . "#breadcrumb"),
+				"primaryImageOfPage" => array("@type" => "ImageObject", "url" => $gn_img)
+			),
+			array(
+				"@type" => "BreadcrumbList",
+				"@id"   => $gn_canon . "#breadcrumb",
+				"itemListElement" => $gn_list
+			)
+		)
+	);
+?>
+<script type="application/ld+json"><?php echo str_replace("</", "<\\/", json_encode($gn_ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></script>
+<?php endif; ?>

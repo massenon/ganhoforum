@@ -1,0 +1,601 @@
+<script>
+	"use strict";
+
+	/* Onglets Se connecter / Créer un compte : un seul document, ?auth= reflété dans l'URL */
+	(function() {
+		var tabs = Array.prototype.slice.call(document.querySelectorAll('.gx-tab'));
+
+		if (!tabs.length) {
+			return;
+		}
+
+		var titles = {login: "Connexion | Forum Ganho", signup: "Créer un compte | Forum Ganho"};
+		var shell  = document.querySelector('.gx-shell');
+
+		function activate(name, opts) {
+			opts = opts || {};
+
+			tabs.forEach(function(tab) {
+				var on = (tab.id === "tab-" + name);
+				var panel = document.getElementById(tab.getAttribute("aria-controls"));
+
+				tab.setAttribute("aria-selected", on ? "true" : "false");
+				tab.setAttribute("tabindex", on ? "0" : "-1");
+
+				if (panel) {
+					panel.hidden = !on;
+				}
+			});
+
+			document.title = titles[name];
+			shell.setAttribute("data-auth", name);
+
+			if (opts.push) {
+				var params = new URLSearchParams(window.location.search);
+
+				params.set("auth", name);
+				params.delete("em_code");
+				history.pushState({auth: name}, "", window.location.pathname + "?" + params.toString());
+			}
+
+			if (opts.focus === "tab") {
+				document.getElementById("tab-" + name).focus();
+			}
+			else if (opts.focus === "panel") {
+				var title = document.querySelector("#panel-" + name + " .gx-card__title");
+
+				if (title) {
+					title.setAttribute("tabindex", "-1");
+					title.focus();
+				}
+			}
+		}
+
+		tabs.forEach(function(tab, index) {
+			tab.addEventListener("click", function(e) {
+				e.preventDefault();
+				activate(tab.id.replace("tab-", ""), {push: true});
+			});
+
+			tab.addEventListener("keydown", function(e) {
+				var next = null;
+
+				if (e.key === "ArrowRight") { next = (index + 1) % tabs.length; }
+				else if (e.key === "ArrowLeft") { next = (index - 1 + tabs.length) % tabs.length; }
+				else if (e.key === "Home") { next = 0; }
+				else if (e.key === "End") { next = tabs.length - 1; }
+
+				if (next !== null) {
+					e.preventDefault();
+					activate(tabs[next].id.replace("tab-", ""), {push: true, focus: "tab"});
+				}
+			});
+		});
+
+		document.addEventListener("click", function(e) {
+			var link = e.target.closest ? e.target.closest("[data-gx-tab]") : null;
+
+			if (link) {
+				e.preventDefault();
+				activate(link.getAttribute("data-gx-tab"), {push: true, focus: "panel"});
+			}
+		});
+
+		window.addEventListener("popstate", function() {
+			var name = new URLSearchParams(window.location.search).get("auth");
+
+			activate(name === "signup" ? "signup" : "login");
+		});
+	})();
+
+	$(document).ready(function($) {
+		Vue.use(window.vuelidate.default);
+
+		/* Résumé d'erreurs focalisable + lien vers le champ fautif (commun à tous les formulaires) */
+		var gx_common = {
+			methods: {
+				focus_field: function(id) {
+					var el = document.getElementById(id);
+
+					if (el) {
+						el.focus();
+					}
+				},
+				reveal_summary: function() {
+					var _app_ = this;
+
+					_app_.show_summary = true;
+
+					_app_.$nextTick(function() {
+						if (_app_.$refs.summary) {
+							_app_.$refs.summary.focus();
+						}
+					});
+				}
+			}
+		};
+
+		if ($("form#cl-login-vue-app").length) {
+			new Vue({
+				"el": "#cl-login-vue-app",
+				mixins: [gx_common],
+				data: {
+					email: "",
+					password: "",
+					submitting: false,
+					done: false,
+					unsuccessful_attempt: false,
+					show_summary: false,
+					password_display: "password"
+				},
+				computed: {
+					err_email: function() {
+						if (this.$v.email.$error) {
+							if (!this.$v.email.required) { return "Saisissez votre adresse e-mail ou votre nom d'utilisateur."; }
+							return "L'identifiant doit contenir entre 3 et 55 caractères.";
+						}
+						return "";
+					},
+					err_password: function() {
+						if (this.$v.password.$error) {
+							if (!this.$v.password.required) { return "Saisissez votre mot de passe."; }
+							return "Le mot de passe doit contenir entre 6 et 20 caractères.";
+						}
+						if (this.unsuccessful_attempt) {
+							return "Aucun compte ne correspond à ces identifiants. Vérifiez les informations saisies et réessayez.";
+						}
+						return "";
+					},
+					errors: function() {
+						var list = [];
+
+						if (this.err_email) { list.push({id: "login-email", msg: this.err_email}); }
+						if (this.err_password) { list.push({id: "login-password", msg: this.err_password}); }
+
+						return list;
+					}
+				},
+				validations: {
+					email: {
+						required: window.validators.required,
+						min_length: window.validators.minLength(3),
+						max_length: window.validators.maxLength(55)
+					},
+					password: {
+						required: window.validators.required,
+						min_length: window.validators.minLength(6),
+						max_length: window.validators.maxLength(20)
+					}
+				},
+				methods: {
+					submit_form: function(_self = false) {
+						_self.preventDefault();
+
+						var _app_ = this;
+
+						_app_.unsuccessful_attempt = false;
+						_app_.$v.$touch();
+
+						if (_app_.$v.$invalid) {
+							_app_.reveal_summary();
+							return false;
+						}
+
+						$(_self.target).ajaxSubmit({
+							url: "<?php echo cl_link("native_api/auth/login"); ?>",
+							type: 'POST',
+							dataType: 'json',
+							beforeSend: function() {
+								_app_.submitting = true;
+							},
+							success: function(data) {
+								if (data.status == 200) {
+									_app_.done = true;
+									_app_.show_summary = false;
+
+									delay(function() {
+										cl_redirect("<?php echo cl_link("home"); ?>");
+									}, 1000);
+								}
+
+								else {
+									_app_.unsuccessful_attempt = true;
+									_app_.reveal_summary();
+								}
+							},
+							error: function() {
+								_app_.unsuccessful_attempt = true;
+								_app_.reveal_summary();
+							},
+							complete: function() {
+								_app_.submitting = false;
+							}
+						});
+					},
+					password_display_toggle: function() {
+						this.password_display = (this.password_display == "text") ? "password" : "text";
+					}
+				}
+			});
+		}
+
+		if ($("form#cl-signup-vue-app").length) {
+			new Vue({
+				"el": "#cl-signup-vue-app",
+				mixins: [gx_common],
+				data: {
+					done: false,
+					email: "",
+					password: "",
+					password2: "",
+					uname: "",
+					submitting: false,
+					attempted: false,
+					show_summary: false,
+					tos_agree: false,
+					uname_taken: false,
+					email_taken: false,
+					process_failed: false,
+					grecaptcha_error: false,
+					password1_display: "password",
+					password2_display: "password",
+					invite_code: "<?php echo htmlspecialchars(fetch_or_get($cl["invite_code"], ''), ENT_QUOTES, 'UTF-8'); ?>",
+					grecaptcha: "{%config google_recaptcha%}"
+				},
+				computed: {
+					err_uname: function() {
+						if (this.$v.uname.$error) {
+							if (!this.$v.uname.required) { return "Choisissez un nom d'utilisateur."; }
+							return "Ce nom d'utilisateur n'est pas valide : 3 à 25 caractères, avec uniquement des lettres, des chiffres et des tirets bas.";
+						}
+						if (this.uname_taken) { return "Ce nom d'utilisateur est déjà pris, choisissez-en un autre."; }
+						return "";
+					},
+					err_email: function() {
+						if (this.$v.email.$error) {
+							if (!this.$v.email.required) { return "Saisissez votre adresse e-mail."; }
+							if (!this.$v.email.email) { return "Cette adresse e-mail n'est pas valide."; }
+							return "L'adresse e-mail doit contenir entre 8 et 55 caractères.";
+						}
+						if (this.email_taken) { return "Cette adresse e-mail est déjà utilisée."; }
+						return "";
+					},
+					err_password: function() {
+						if (this.$v.password.$error) {
+							if (!this.$v.password.required) { return "Choisissez un mot de passe."; }
+							return "Le mot de passe doit contenir entre 6 et 20 caractères.";
+						}
+						return "";
+					},
+					err_password2: function() {
+						if (this.$v.password2.$error) {
+							if (!this.$v.password2.required) { return "Confirmez votre mot de passe."; }
+							return "Les deux mots de passe ne correspondent pas.";
+						}
+						return "";
+					},
+					err_tos: function() {
+						return (this.attempted && !this.tos_agree) ? "Vous devez accepter les conditions d'utilisation et la politique de confidentialité pour créer un compte." : "";
+					},
+					errors: function() {
+						var list = [];
+
+						if (this.err_uname) { list.push({id: "signup-uname", msg: this.err_uname}); }
+						if (this.err_email) { list.push({id: "signup-email", msg: this.err_email}); }
+						if (this.err_password) { list.push({id: "signup-password", msg: this.err_password}); }
+						if (this.err_password2) { list.push({id: "signup-conf", msg: this.err_password2}); }
+						if (this.err_tos) { list.push({id: "tos-agree", msg: this.err_tos}); }
+						if (this.grecaptcha_error) { list.push({id: "signup-uname", msg: "Veuillez cocher reCAPTCHA pour poursuivre l'inscription."}); }
+						if (this.process_failed) { list.push({id: "signup-uname", msg: "L'inscription a échoué. Vérifiez les informations saisies et réessayez."}); }
+
+						return list;
+					}
+				},
+				validations: {
+					uname: {
+						required: window.validators.required,
+						min_length: window.validators.minLength(3),
+						max_length: window.validators.maxLength(25),
+						is_alpha_num: cl_uname_valid
+					},
+					email: {
+						required: window.validators.required,
+						email: window.validators.email,
+						min_length: window.validators.minLength(8),
+						max_length: window.validators.maxLength(55)
+					},
+					password: {
+						required: window.validators.required,
+						min_length: window.validators.minLength(6),
+						max_length: window.validators.maxLength(20)
+					},
+					password2: {
+						required: window.validators.required,
+						sameAs: window.validators.sameAs('password')
+					}
+				},
+				methods: {
+					submit_form: function(_self = false) {
+						_self.preventDefault();
+
+						var _app_ = this;
+
+						_app_.attempted = true;
+						_app_.grecaptcha_error = false;
+						_app_.$v.$touch();
+
+						if (_app_.$v.$invalid || !_app_.tos_agree) {
+							_app_.reveal_summary();
+							return false;
+						}
+
+						if (_app_.grecaptcha == "on") {
+							var grecap_res = grecaptcha.getResponse();
+
+							if (grecap_res.length < 1) {
+								_app_.grecaptcha_error = true;
+								_app_.reveal_summary();
+								return false;
+							}
+						}
+
+						$(_self.target).ajaxSubmit({
+							url: "<?php echo cl_link("native_api/auth/signup"); ?>",
+							type: 'POST',
+							dataType: 'json',
+							data: {
+								invite_code: _app_.invite_code
+							},
+							beforeSend: function() {
+								_app_.submitting     = true;
+								_app_.uname_taken    = false;
+								_app_.email_taken    = false;
+								_app_.process_failed = false;
+							},
+							success: function(data) {
+								if (data.status == 200) {
+									_app_.done = true;
+									_app_.show_summary = false;
+
+									delay(function() {
+										cl_redirect("<?php echo cl_link("start_up"); ?>");
+									}, 1500);
+								}
+								else if(data.status == 401) {
+									_app_.done = true;
+									_app_.show_summary = false;
+
+									delay(function() {
+										cl_redirect("<?php echo cl_link("confirm_registration"); ?>");
+									}, 1500);
+								}
+								else {
+									if (data.err_code == "doubling_uname") {
+										_app_.uname_taken = true;
+									}
+
+									else if(data.err_code == "doubling_email") {
+										_app_.email_taken = true;
+									}
+
+									else {
+										_app_.process_failed = true;
+									}
+
+									_app_.reveal_summary();
+								}
+							},
+							error: function() {
+								_app_.process_failed = true;
+								_app_.reveal_summary();
+							},
+							complete: function() {
+								_app_.submitting = false;
+							}
+						});
+					},
+					password1_display_toggle: function() {
+						this.password1_display = (this.password1_display == "text") ? "password" : "text";
+					},
+					password2_display_toggle: function() {
+						this.password2_display = (this.password2_display == "text") ? "password" : "text";
+					}
+				}
+			});
+		}
+
+		if ($("form#cl-resetpass-vue-app").length) {
+			new Vue({
+				"el": "#cl-resetpass-vue-app",
+				mixins: [gx_common],
+				data: {
+					email: "",
+					submitting: false,
+					show_summary: false,
+					process_failed: false,
+					process_succeeded: false,
+					unknown_email: false,
+					too_many: false
+				},
+				computed: {
+					err_email: function() {
+						if (this.$v.email.$error) {
+							if (!this.$v.email.required) { return "Saisissez votre adresse e-mail."; }
+							if (!this.$v.email.email) { return "Cette adresse e-mail n'est pas valide."; }
+							return "L'adresse e-mail doit contenir entre 8 et 55 caractères.";
+						}
+						if (this.too_many) { return "Trop de demandes pour le moment. Patientez quelques minutes avant de réessayer."; }
+						if (this.unknown_email) { return "Aucun compte ne correspond à cette adresse e-mail."; }
+						if (this.process_failed) { return "La réinitialisation a échoué. Vérifiez votre adresse e-mail et réessayez plus tard."; }
+						return "";
+					},
+					errors: function() {
+						return this.err_email ? [{id: "forgot-email", msg: this.err_email}] : [];
+					}
+				},
+				validations: {
+					email: {
+						required: window.validators.required,
+						email: window.validators.email,
+						min_length: window.validators.minLength(8),
+						max_length: window.validators.maxLength(55)
+					}
+				},
+				methods: {
+					submit_form: function(_self = false) {
+						_self.preventDefault();
+
+						var _app_ = this;
+
+						_app_.unknown_email  = false;
+						_app_.too_many       = false;
+						_app_.process_failed = false;
+						_app_.$v.$touch();
+
+						if (_app_.$v.$invalid) {
+							_app_.reveal_summary();
+							return false;
+						}
+
+						$(_self.target).ajaxSubmit({
+							url: "<?php echo cl_link("native_api/auth/resetpass"); ?>",
+							type: 'POST',
+							dataType: 'json',
+							beforeSend: function() {
+								_app_.submitting = true;
+							},
+							success: function(data) {
+								if (data.status == 200) {
+									_app_.process_succeeded = true;
+									_app_.$nextTick(function() {
+										if (_app_.$refs.sent) { _app_.$refs.sent.focus(); }
+									});
+								}
+								else {
+									if (data.err_code == "too_many") {
+										_app_.too_many = true;
+									}
+									else if (data.err_code == "unknown_email") {
+										_app_.unknown_email = true;
+									}
+									else {
+										_app_.process_failed = true;
+									}
+
+									_app_.reveal_summary();
+								}
+							},
+							error: function() {
+								_app_.process_failed = true;
+								_app_.reveal_summary();
+							},
+							complete: function() {
+								_app_.submitting = false;
+							}
+						});
+					}
+				}
+			});
+		}
+
+		<?php if (not_empty($cl['em_code'])): ?>
+			if ($("form#cl-savepass-vue-app").length) {
+				new Vue({
+					"el": "#cl-savepass-vue-app",
+					mixins: [gx_common],
+					data: {
+						password: "",
+						password2: "",
+						submitting: false,
+						show_summary: false,
+						process_failed: false,
+						password1_display: "password",
+						password2_display: "password"
+					},
+					computed: {
+						err_password: function() {
+							if (this.$v.password.$error) {
+								if (!this.$v.password.required) { return "Choisissez un nouveau mot de passe."; }
+								return "Le mot de passe doit contenir entre 6 et 20 caractères.";
+							}
+							if (this.process_failed) { return "Le mot de passe n'a pas pu être enregistré. Vérifiez les informations saisies et réessayez."; }
+							return "";
+						},
+						err_password2: function() {
+							if (this.$v.password2.$error) {
+								if (!this.$v.password2.required) { return "Confirmez votre mot de passe."; }
+								return "Les deux mots de passe ne correspondent pas.";
+							}
+							return "";
+						},
+						errors: function() {
+							var list = [];
+
+							if (this.err_password) { list.push({id: "newpass-password", msg: this.err_password}); }
+							if (this.err_password2) { list.push({id: "newpass-conf", msg: this.err_password2}); }
+
+							return list;
+						}
+					},
+					validations: {
+						password: {
+							required: window.validators.required,
+							min_length: window.validators.minLength(6),
+							max_length: window.validators.maxLength(20)
+						},
+						password2: {
+							required: window.validators.required,
+							sameAs: window.validators.sameAs('password')
+						}
+					},
+					methods: {
+						submit_form: function(_self = false) {
+							_self.preventDefault();
+
+							var _app_ = this;
+
+							_app_.process_failed = false;
+							_app_.$v.$touch();
+
+							if (_app_.$v.$invalid) {
+								_app_.reveal_summary();
+								return false;
+							}
+
+							$(_self.target).ajaxSubmit({
+								url: "<?php echo cl_link("native_api/auth/save_password"); ?>",
+								type: 'POST',
+								dataType: 'json',
+								beforeSend: function() {
+									_app_.submitting = true;
+								},
+								success: function(data) {
+									if (data.status == 200) {
+										cl_redirect("<?php echo cl_link("home"); ?>");
+									}
+									else {
+										_app_.process_failed = true;
+										_app_.reveal_summary();
+									}
+								},
+								error: function() {
+									_app_.process_failed = true;
+									_app_.reveal_summary();
+								},
+								complete: function() {
+									_app_.submitting = false;
+								}
+							});
+						},
+						password1_display_toggle: function() {
+							this.password1_display = (this.password1_display == "text") ? "password" : "text";
+						},
+						password2_display_toggle: function() {
+							this.password2_display = (this.password2_display == "text") ? "password" : "text";
+						}
+					}
+				});
+			}
+		<?php endif; ?>
+	});
+</script>

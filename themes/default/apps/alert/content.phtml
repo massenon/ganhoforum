@@ -1,0 +1,172 @@
+<div class="timeline-container" data-app="alert-chat">
+<style>
+.gnal{--ink:var(--gn-ink,#0B0B14);--pri:var(--gn-primary,#2B33C9);--bd:var(--gn-border,#E6DFF0);--soft:var(--gn-bg-soft,#F8F1FF);max-width:760px;margin:0 auto;padding:16px;box-sizing:border-box;font-family:Arial,"Liberation Sans",Roboto,sans-serif;color:#17132B}
+.gnal__box{display:flex;flex-direction:column;min-height:min(70vh,640px);background:#fff;border:1px solid var(--bd);border-radius:24px;overflow:hidden;box-shadow:0 12px 32px rgba(23,19,43,.1)}
+.gnal__h{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--ink);color:#fff;position:relative}
+.gnal__h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#5B2BB8,#2B33C9,#0A66E8,#0F8B6D,#3F9A1A,#FFBE05,#F66100,#E8381A)}
+.gnal__av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#5B2BB8,#0A66E8,#FFBE05,#E8381A);display:grid;place-items:center;font:800 1rem Montserrat,system-ui,sans-serif}
+.gnal__h b{display:block;font:800 .95rem Montserrat,system-ui,sans-serif}.gnal__h small{color:#B9B4D0;font-size:.75rem}
+.gnal__lock{margin-left:auto;font-size:.72rem;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 12px}
+.gnal__log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--soft)}
+.gnal__m{max-width:84%;padding:11px 16px;border-radius:20px;line-height:1.5;font-size:.9rem;white-space:pre-wrap;word-break:break-word}
+.gnal__m--bot{align-self:flex-start;background:#fff;border:1px solid var(--bd);border-bottom-left-radius:6px}
+.gnal__m--me{align-self:flex-end;background:var(--pri);color:#fff;border-bottom-right-radius:6px}
+.gnal__m--team{align-self:flex-start;background:#E4F6EE;border:1px solid #BFE6D2;border-bottom-left-radius:6px}
+.gnal__m--ok{align-self:stretch;max-width:none;background:#E4F6EE;border-radius:16px}
+.gnal__m--err{align-self:stretch;max-width:none;background:#FDE7E3;color:#8A1708;border-radius:16px}
+.gnal__tag{display:block;font:700 .7rem Montserrat,system-ui,sans-serif;color:#0F6B4D;margin-bottom:2px}
+.gnal__qr{display:flex;flex-wrap:wrap;gap:8px}
+.gnal__qr button{min-height:44px;padding:0 18px;border-radius:999px;border:2px solid var(--pri);background:#fff;color:var(--pri);font:700 .85rem Montserrat,system-ui,sans-serif;cursor:pointer}
+.gnal__qr button:hover,.gnal__qr button:focus-visible{background:var(--pri);color:#fff}
+.gnal__sum{background:#fff;border:1px solid var(--bd);border-radius:16px;padding:12px 16px;font-size:.85rem}
+.gnal__sum dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}.gnal__sum dt{color:#55506B}.gnal__sum dd{margin:0;font-weight:700;word-break:break-word}
+.gnal__f{display:flex;gap:10px;padding:12px 14px;border-top:1px solid var(--bd);background:#fff}
+.gnal__f textarea{flex:1;min-height:46px;max-height:140px;padding:12px 16px;border:2px solid var(--bd);border-radius:23px;font:inherit;font-size:.9rem;resize:none}
+.gnal__f textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 4px rgba(43,51,201,.18)}
+.gnal__f button{min-height:46px;padding:0 22px;border:0;border-radius:999px;background:var(--pri);color:#fff;font:700 .85rem Montserrat,system-ui,sans-serif;cursor:pointer}
+.gnal__f button:disabled,.gnal__f textarea:disabled{opacity:.5;cursor:not-allowed}
+.gnal-h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gnal__note{margin:14px 0 0;padding:0 8px;font-size:.8rem;line-height:1.55;color:#55506B;text-align:center}
+@media (max-width:760px){.gnal{padding:0 0 16px}.gnal__note{padding:0 16px}.gnal__box{border-radius:0;border-left:0;border-right:0;min-height:calc(100vh - 140px)}.gnal__m{max-width:92%}}
+</style>
+<div class="gnal">
+  <h1 class="gnal-h1">Créer une alerte VBG</h1>
+  <div class="gnal__box">
+    <div class="gnal__h"><span class="gnal__av" aria-hidden="true">G</span><div><b>Assistant GANXÔ</b><small>Alerte VBG · transmise à l’équipe</small></div><span class="gnal__lock">🔒 Échange sécurisé</span></div>
+    <div class="gnal__log" id="gnal-log" role="log" aria-live="polite"></div>
+    <form class="gnal__f" id="gnal-form" autocomplete="off">
+      <textarea id="gnal-in" rows="1" maxlength="4000" placeholder="Choisissez une réponse ci-dessus…" aria-label="Votre message" disabled></textarea>
+      <button type="submit" id="gnal-send" disabled>Envoyer</button>
+    </form>
+  </div>
+  <p class="gnal__note">Vos réponses sont transmises de façon sécurisée à GANXÔ Alerte VBG. Rien n’est publié sur le forum. Le contact est facultatif.</p>
+</div>
+<script>
+(function () {
+  var API = '<?php echo cl_link("native_api/alert/"); ?>'.replace(/\/?$/, '/');
+  var $log = document.getElementById('gnal-log'), $in = document.getElementById('gnal-in'), $send = document.getElementById('gnal-send'), $form = document.getElementById('gnal-form');
+  var S = {cfg: null, step: 'init', cat: null, catName: '', msg: '', email: '', phone: '', ticket: null, poll: null, shown: 0};
+
+  function el(cls, text) { var d = document.createElement('div'); d.className = cls; if (text != null) d.textContent = text; $log.appendChild(d); $log.scrollTop = $log.scrollHeight; return d; }
+  function bot(t) { return el('gnal__m gnal__m--bot', t); }
+  function me(t) { return el('gnal__m gnal__m--me', t); }
+  function err(t) { return el('gnal__m gnal__m--err', t); }
+  function qr(items) {
+    var w = el('gnal__qr'); w.setAttribute('role', 'group');
+    items.forEach(function (it) { var b = document.createElement('button'); b.type = 'button'; b.textContent = it[0]; b.addEventListener('click', function () { w.remove(); it[1](); }); w.appendChild(b); });
+    $log.scrollTop = $log.scrollHeight; var f = w.querySelector('button'); if (f) { try { f.focus({preventScroll: true}); } catch (e) {} }
+  }
+  function composer(on, ph) { $in.disabled = !on; $send.disabled = !on; $in.placeholder = ph || ''; if (on) { $in.focus(); } }
+  function post(action, params) {
+    var body = new URLSearchParams(params || {});
+    return fetch(API + action, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: body.toString()}).then(function (r) { return r.json(); });
+  }
+  function get(action, q) { return fetch(API + action + (q ? '?' + new URLSearchParams(q).toString() : ''), {credentials: 'same-origin'}).then(function (r) { return r.json(); }); }
+
+  function start() {
+    composer(false, 'Choisissez une réponse ci-dessus…');
+    bot('Bonjour, je suis là pour vous aider à envoyer une alerte à l’équipe GANXÔ. Vous pouvez vous arrêter à tout moment. Que s’est-il passé ?');
+    qr(S.cfg.categories.map(function (c) { return [c.name, function () { S.cat = c.id; S.catName = c.name; me(c.name); askDesc(); }]; }));
+  }
+  function askDesc() {
+    S.step = 'desc';
+    bot('Merci de me l’avoir dit. Racontez-moi ce qui s’est passé, avec vos mots : où, quand, qui est concerné·e. (' + S.cfg.desc_min + ' caractères minimum)');
+    composer(true, 'Décrivez la situation…');
+  }
+  function askContact() {
+    S.step = 'contact'; composer(false, '');
+    bot('Souhaitez-vous laisser un moyen de vous répondre ? C’est facultatif : vous pourrez aussi suivre la réponse ici.');
+    qr([['Mon e-mail', function () { me('Mon e-mail'); S.step = 'email'; bot('Quelle est votre adresse e-mail ?'); composer(true, 'vous@exemple.org'); }],
+        ['Mon téléphone', function () { me('Mon téléphone'); S.step = 'phone'; bot('Quel est votre numéro de téléphone ?'); composer(true, '+229 …'); }],
+        ['Rester anonyme', function () { me('Rester anonyme'); S.email = ''; S.phone = ''; confirm_(); }]]);
+  }
+  function confirm_() {
+    S.step = 'confirm'; composer(false, '');
+    bot('Voici le résumé de votre alerte. Vous pouvez la modifier avant l’envoi.');
+    var box = el('gnal__sum'), dl = document.createElement('dl');
+    [['Type', S.catName], ['Message', S.msg.length > 160 ? S.msg.slice(0, 160) + '…' : S.msg], ['Contact', S.email || S.phone || 'Anonyme']].forEach(function (r) {
+      var dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = r[0]; dd.textContent = r[1]; dl.appendChild(dt); dl.appendChild(dd); });
+    box.appendChild(dl);
+    qr([['Envoyer l’alerte', sendAlert], ['Recommencer', function () { me('Recommencer'); S.msg = ''; S.email = ''; S.phone = ''; start(); }]]);
+  }
+  function sendAlert() {
+    me('Envoyer l’alerte'); var wait = bot('Envoi en cours…');
+    post('send', {category: S.cat, message: S.msg, email: S.email, phone: S.phone}).then(function (r) {
+      wait.remove();
+      if (r.status === 200 && r.api && r.api.ticket) {
+        S.ticket = r.api.ticket;
+        var ok = el('gnal__m gnal__m--ok'); ok.textContent = '✅ Alerte envoyée. Numéro de suivi : ' + S.ticket + '. L’équipe GANXÔ vous répondra ici, dans cette conversation. Gardez cette page ouverte ou revenez plus tard avec le même appareil.';
+        follow();
+      } else {
+        var m = (r.api && r.api.messages && r.api.messages.join(' ')) || 'L’envoi a échoué. Vos réponses sont conservées : réessayez dans un instant.';
+        err(m);
+        qr([['Réessayer', sendAlert]]);
+      }
+    }).catch(function () { wait.remove(); err('Connexion impossible. Vérifiez votre réseau puis réessayez.'); qr([['Réessayer', sendAlert]]); });
+  }
+  function follow() {
+    S.step = 'follow'; S.shown = 1; composer(true, 'Écrire un message à l’équipe…');
+    clearInterval(S.poll); S.poll = setInterval(refresh, 20000);
+  }
+  function refresh() {
+    if (!S.ticket) return;
+    get('messages', {ticket: S.ticket}).then(function (r) {
+      if (!(r.status === 200 && r.api && r.api.messages)) return;
+      var list = r.api.messages;
+      for (var i = S.shown; i < list.length; i++) {
+        if (list[i].from === 'team') { var d = el('gnal__m gnal__m--team'); var t = document.createElement('span'); t.className = 'gnal__tag'; t.textContent = 'Équipe GANXÔ'; d.appendChild(t); d.appendChild(document.createTextNode(list[i].text)); }
+        else if (i >= S.shown && list[i].from === 'me' && i >= S.shown) { /* déjà affiché localement */ }
+      }
+      S.shown = list.length;
+      if (r.api.closed) { composer(false, 'Cette alerte est clôturée.'); clearInterval(S.poll); bot('Cette alerte a été clôturée par l’équipe. Vous pouvez en créer une nouvelle si besoin.'); }
+    });
+  }
+  function resume(t) {
+    S.ticket = t; var w = bot('Je retrouve votre conversation ' + t + '…');
+    get('messages', {ticket: t}).then(function (r) {
+      w.remove();
+      if (!(r.status === 200 && r.api && r.api.messages)) { err('Impossible de retrouver cette alerte.'); start(); return; }
+      r.api.messages.forEach(function (m, i) {
+        if (m.from === 'team') { var d = el('gnal__m gnal__m--team'); var tg = document.createElement('span'); tg.className = 'gnal__tag'; tg.textContent = 'Équipe GANXÔ'; d.appendChild(tg); d.appendChild(document.createTextNode(m.text)); }
+        else { me(m.text); }
+      });
+      S.shown = r.api.messages.length;
+      if (r.api.closed) { bot('Cette alerte est clôturée.'); composer(false, 'Alerte clôturée.'); qr([['Créer une nouvelle alerte', function () { S.ticket = null; start(); }]]); }
+      else { follow(); }
+    });
+  }
+
+  $form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = $in.value.trim(); if (!v || $in.disabled) return;
+    if (S.step === 'desc') {
+      if (v.length < S.cfg.desc_min) { err('Votre message est un peu court : ajoutez quelques détails (' + S.cfg.desc_min + ' caractères minimum).'); return; }
+      me(v); S.msg = v; $in.value = ''; askContact();
+    } else if (S.step === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { err('Cette adresse e-mail ne semble pas valide.'); return; }
+      me(v); S.email = v; S.phone = ''; $in.value = ''; confirm_();
+    } else if (S.step === 'phone') {
+      if (!/^[0-9+() .-]{6,30}$/.test(v)) { err('Ce numéro ne semble pas valide.'); return; }
+      me(v); S.phone = v; S.email = ''; $in.value = ''; confirm_();
+    } else if (S.step === 'follow') {
+      me(v); $in.value = ''; S.shown++;
+      post('reply', {ticket: S.ticket, comment: v}).then(function (r) { if (r.status !== 200) { err(r.status === 409 ? 'Cette alerte est clôturée.' : 'Message non envoyé. Réessayez.'); } });
+    }
+  });
+  $in.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $form.requestSubmit(); } });
+
+  get('config').then(function (r) {
+    var c = r.api;
+    if (!(r.status === 200 && c && c.ok)) {
+      bot('Le service d’alerte est momentanément indisponible depuis le forum. Vous pouvez réessayer dans un instant.'); return;
+    }
+    S.cfg = c;
+    var mine = r.tickets || [];
+    if (mine.length) {
+      bot('Bonjour. Vous avez déjà une alerte en cours. Que souhaitez-vous faire ?');
+      qr([['Reprendre ' + mine[mine.length - 1], function () { me('Reprendre ' + mine[mine.length - 1]); resume(mine[mine.length - 1]); }], ['Créer une nouvelle alerte', function () { me('Créer une nouvelle alerte'); start(); }]]);
+    } else { start(); }
+  }).catch(function () { bot('Connexion impossible pour le moment. Réessayez dans un instant.'); });
+})();
+</script>
+</div>

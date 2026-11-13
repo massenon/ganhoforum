@@ -1,0 +1,140 @@
+<div class="cp-app-container gn-cmp gn-edu-admin" data-app="edu-comics" id="vue-bd-app" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>Bandes dessinées</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Bandes dessinées</a></li>
+            </ol>
+        </div>
+        <div class="rp"><button type="button" class="btn btn-primary" v-on:click="open_new">+ Nouvelle bande dessinée</button></div>
+    </div>
+
+    <div class="gn-cmp-kpis" role="list">
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ comics.length }}</span><span class="gn-cmp-kpi__l">Bandes dessinées</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ count_status('published') }}</span><span class="gn-cmp-kpi__l">Publiées</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ total_panels }}</span><span class="gn-cmp-kpi__l">Cases au total</span></div>
+    </div>
+
+    <div class="card">
+        <div class="header gn-cmp-filters">
+            <label class="gn-cmp-search"><span class="gn-sr">Rechercher</span><input type="search" v-model.trim="f.q" placeholder="Rechercher une bande dessinée…"></label>
+            <label><span class="gn-sr">Statut</span><select v-model="f.status"><option value="">Tous les statuts</option><option value="published">Publié</option><option value="draft">Brouillon</option></select></label>
+        </div>
+        <div class="body gn-cmp-tablewrap">
+            <table class="table gn-cmp-table">
+                <thead><tr><th>Couverture</th><th>Titre</th><th>Catégorie</th><th>Cases</th><th>Statut</th><th>Mise à jour</th><th class="gn-cmp-actions-h">Actions</th></tr></thead>
+                <tbody v-if="filtered.length">
+                    <tr v-for="c in filtered" v-bind:key="c.id">
+                        <td><span class="gn-bd-thumb"><img v-if="c.cover_url" v-bind:src="c.cover_url" alt=""></span></td>
+                        <td><b>{{ c.title }}</b><span class="gn-badge gn-badge--sending gn-pin" v-if="c.pinned">À la une</span><span class="gn-badge gn-badge--sending gn-pin" v-if="c.has_bubbles">Avec bulles</span><small class="gn-cmp-sub">{{ c.summary }}</small></td>
+                        <td>{{ c.category_label }}</td>
+                        <td>{{ c.panel_count }}</td>
+                        <td><span class="gn-badge" v-bind:class="c.status === 'published' ? 'gn-badge--sent' : 'gn-badge--draft'">{{ c.status === 'published' ? 'Publié' : 'Brouillon' }}</span></td>
+                        <td>{{ c.date_fr }}</td>
+                        <td class="gn-cmp-actions">
+                            <a class="gn-icon-btn" title="Voir sur le forum" aria-label="Voir sur le forum" v-bind:href="c.url" target="_blank" rel="noopener" v-bind:class="{'is-off': c.status !== 'published'}"><?php echo cl_ikon('eye'); ?></a>
+                            <button type="button" class="gn-icon-btn" title="Modifier" aria-label="Modifier" v-on:click="open_edit(c)"><?php echo cl_ikon('edit'); ?></button>
+                            <button type="button" class="gn-icon-btn" title="Dupliquer" aria-label="Dupliquer" v-on:click="duplicate(c)"><?php echo cl_ikon('copy'); ?></button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--txt" v-on:click="toggle(c)">{{ c.status === 'published' ? 'Dépublier' : 'Publier' }}</button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--danger" title="Supprimer" aria-label="Supprimer" v-on:click="del = {open: true, item: c}"><?php echo cl_ikon('delete'); ?></button>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody v-else><tr><td colspan="7" class="gn-cmp-empty"><p v-if="comics.length === 0">Aucune bande dessinée pour le moment.</p><p v-else>Aucune bande dessinée ne correspond à ces filtres.</p></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="gn-drawer" v-if="drawer" role="dialog" aria-modal="true" aria-labelledby="gn-bd-title">
+        <div class="gn-drawer__backdrop" v-on:click="close_drawer"></div>
+        <div class="gn-drawer__panel gn-drawer__panel--lg">
+            <header class="gn-drawer__head"><h3 id="gn-bd-title">{{ form.id ? 'Modifier la bande dessinée' : 'Nouvelle bande dessinée' }}</h3><button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="close_drawer">&times;</button></header>
+            <div class="gn-drawer__body">
+                <p class="gn-cmp-err" role="alert" v-if="err.message">{{ err.message }}</p>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'title'}"><label for="bd-title">Titre</label><input id="bd-title" type="text" maxlength="190" v-model.trim="form.title"></div>
+                <div class="gn-field-row">
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'category'}"><label for="bd-cat">Catégorie</label><select id="bd-cat" v-model="form.category"><option value="" disabled>Choisir…</option><option v-for="(label, key) in categories" v-bind:value="key">{{ label }}</option></select></div>
+                    <div class="gn-field"><label for="bd-status">Statut</label><select id="bd-status" v-model="form.status"><option value="draft">Brouillon</option><option value="published">Publié</option></select></div>
+                </div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'summary'}"><label for="bd-sum">Résumé</label><textarea id="bd-sum" rows="2" maxlength="400" v-model="form.summary"></textarea></div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'cover'}"><label for="bd-cover">Couverture (facultative : sinon la première case)</label>
+                    <div class="gn-edu-imgrow"><input id="bd-cover" type="text" v-model.trim="form.cover" placeholder="upload/edu/… ou chemin du site"><label class="btn btn-default gn-edu-upload">Envoyer<input type="file" accept="image/jpeg,image/png,image/webp" class="gn-sr" v-on:change="upload($event, null)"></label></div>
+                </div>
+                <label class="gn-edu-check"><input type="checkbox" v-model="form.pinned"> Mettre à la une (affichée en premier)</label>
+
+                <h4 class="gn-bd-h">Cases ({{ form.panels.length }})</h4>
+                <p class="gn-cmp-err" role="alert" v-if="err.field === 'panels'">{{ err.message }}</p>
+                <ol class="gn-bd-edit">
+                    <li v-for="(p, i) in form.panels" v-bind:key="p.k" class="gn-bd-edit__item">
+                        <div class="gn-bd-edit__head"><b>Case {{ i + 1 }}</b>
+                            <span>
+                                <button type="button" class="gn-icon-btn" aria-label="Monter" v-bind:disabled="i === 0" v-on:click="move(i, -1)">↑</button>
+                                <button type="button" class="gn-icon-btn" aria-label="Descendre" v-bind:disabled="i === form.panels.length - 1" v-on:click="move(i, 1)">↓</button>
+                                <button type="button" class="gn-icon-btn gn-icon-btn--danger" aria-label="Supprimer la case" v-on:click="form.panels.splice(i, 1)">&times;</button>
+                            </span>
+                        </div>
+                        <div class="gn-bd-edit__body">
+                            <span class="gn-bd-thumb gn-bd-thumb--lg"><img v-if="p.image" v-bind:src="img_src(p.image)" alt=""></span>
+                            <div class="gn-bd-edit__fields">
+                                <div class="gn-edu-imgrow"><input type="text" v-model.trim="p.image" v-bind:aria-label="'Image de la case ' + (i + 1)" placeholder="Image : chemin ou https://…"><label class="btn btn-default gn-edu-upload">Envoyer<input type="file" accept="image/jpeg,image/png,image/webp" class="gn-sr" v-on:change="upload($event, i)"></label></div>
+                                <input type="text" v-model="p.caption" maxlength="300" v-bind:aria-label="'Légende de la case ' + (i + 1)" placeholder="Légende (narration sous la case)">
+                                <textarea rows="2" v-model="p.dialogue" maxlength="400" v-bind:aria-label="'Dialogue de la case ' + (i + 1)" placeholder="Dialogue (bulle de texte)"></textarea>
+                                <input type="text" v-model="p.alt" maxlength="200" v-bind:aria-label="'Texte alternatif de la case ' + (i + 1)" placeholder="Description de l’image pour les lecteurs d’écran">
+                            </div>
+                        </div>
+
+                        <div class="gn-conv-ed" v-if="p.image">
+                            <h5 class="gn-bd-h">Bulles de conversation ({{ p.bubbles.length }} / 6)</h5>
+                            <p class="gn-cmp-sub">Faites glisser une bulle sur l’image, ou sélectionnez-la (Tab) puis utilisez les flèches du clavier (Maj : pas de 5 %). Les champs X et Y donnent la position exacte. Les bulles qui se chevauchent sont écartées à l’affichage.</p>
+                            <div class="gn-conv-ed__stage" v-on:pointerdown="drag_start($event, p)" v-on:keydown="key_move($event, p)">
+                                <div class="gn-conv-stage"><img v-bind:src="img_src(p.image)" alt="" draggable="false"><div class="gnc-over" v-html="bubbles_html(p)"></div></div>
+                            </div>
+                            <div class="gn-conv-ed__list">
+                                <div class="gn-conv-ed__b" v-for="(bb, bi) in p.bubbles" v-bind:key="bb.k" v-bind:class="'gnc-c-' + bb.color">
+                                    <div class="gn-conv-ed__row">
+                                        <label>Type<select v-model="bb.type" v-on:change="on_type(bb)" v-on:focus="p.sel = bi"><option value="dit">Dit (bulle ronde)</option><option value="pense">Pense (nuage)</option><option value="ressent">Ressent (émotion)</option></select></label>
+                                        <label v-if="bb.type === 'ressent'">Émotion<select v-model="bb.emotion" v-on:change="on_emotion(bb)"><option v-for="(e, key) in emotions" v-bind:value="key">{{ e[0] }}</option></select></label>
+                                        <label>Couleur<select v-model="bb.color"><option v-for="(label, key) in colors" v-bind:value="key">{{ key }} · {{ label }}</option></select></label>
+                                        <label>Queue<select v-model="bb.tail"><option v-for="(label, key) in tails" v-bind:value="key">{{ label }}</option></select></label>
+                                        <label>Personnage (facultatif)<input type="text" maxlength="24" v-model="bb.who"></label>
+                                    </div>
+                                    <label>Texte de la bulle {{ bi + 1 }}<textarea maxlength="140" rows="2" v-model="bb.text" v-on:focus="p.sel = bi"></textarea></label>
+                                    <div class="gn-conv-ed__row">
+                                        <label>X (% de la largeur)<input type="number" min="5" max="95" step="0.5" v-model.number="bb.x" v-on:change="clamp_xy(bb)"></label>
+                                        <label>Y (% de la hauteur)<input type="number" min="5" max="95" step="0.5" v-model.number="bb.y" v-on:change="clamp_xy(bb)"></label>
+                                        <span class="gn-conv-ed__count" v-bind:class="{'is-over': bb.text.length > 140}">{{ bb.text.length }} / 140 caractères</span>
+                                    </div>
+                                    <div class="gn-conv-ed__acts">
+                                        <button type="button" class="gn-icon-btn" v-bind:disabled="bi === 0" v-on:click="move_bubble(p, bi, -1)">Monter</button>
+                                        <button type="button" class="gn-icon-btn" v-bind:disabled="bi === p.bubbles.length - 1" v-on:click="move_bubble(p, bi, 1)">Descendre</button>
+                                        <button type="button" class="gn-icon-btn gn-icon-btn--danger" v-on:click="remove_bubble(p, bi)">Supprimer la bulle</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-default" v-bind:disabled="p.bubbles.length >= 6" v-on:click="add_bubble(p)">+ Ajouter une bulle</button>
+                        </div>
+                    </li>
+                </ol>
+                <button type="button" class="btn btn-default" v-on:click="add_panel" v-bind:disabled="form.panels.length >= 24">+ Ajouter une case</button>
+            </div>
+            <footer class="gn-drawer__foot">
+                <button type="button" class="btn btn-default" v-on:click="close_drawer">Annuler</button>
+                <span class="gn-drawer__spacer"></span>
+                <button type="button" class="btn btn-primary" v-bind:disabled="busy" v-on:click="save">{{ form.status === 'published' ? 'Enregistrer et publier' : 'Enregistrer le brouillon' }}</button>
+            </footer>
+        </div>
+    </div>
+
+    <div class="gn-drawer gn-drawer--center" v-if="del.open" role="alertdialog" aria-modal="true" aria-labelledby="gn-bd-del">
+        <div class="gn-drawer__backdrop" v-on:click="del.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-bd-del">Supprimer cette bande dessinée ?</h3>
+            <p>« {{ del.item && del.item.title }} » et ses cases seront définitivement supprimées. Les images envoyées restent sur le serveur.</p>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="del.open = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn gn-btn-danger" v-on:click="do_delete">Supprimer</button></div>
+        </div>
+    </div>
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<?php echo cl_template('cpanel/assets/edu_comics/scripts/app_master_script'); ?>

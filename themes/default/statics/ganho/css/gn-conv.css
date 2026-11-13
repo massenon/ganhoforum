@@ -1,0 +1,120 @@
+/* Bulles de conversation sur les illustrations des bandes dessinées (Ganho) : bulles, commandes du lecteur, légende, éditeur d'administration. Préfixes gn-conv- et gnc-. */
+
+/* ----- Code couleur (bulles, légende, éditeur) ----- */
+.gnc-c-vert{--b:#17703A;--t:#E4F6EE}
+.gnc-c-jaune{--b:#9A5B00;--t:#FFF1CC}
+.gnc-c-orange{--b:#C2410C;--t:#FFE8DC}
+.gnc-c-rouge{--b:#C8200E;--t:#FDE7E3}
+.gnc-c-bleu{--b:#0A66E8;--t:#E3EEFF}
+.gnc-c-violet{--b:#5B2BB8;--t:#EEE8FB}
+body[data-bg="dark"] .gnc-c-vert{--b:#58D68D;--t:#12302A}
+body[data-bg="dark"] .gnc-c-jaune{--b:#FFBE05;--t:#3A2F12}
+body[data-bg="dark"] .gnc-c-orange{--b:#FF9A5C;--t:#3B2012}
+body[data-bg="dark"] .gnc-c-rouge{--b:#FF6B5C;--t:#3D1511}
+body[data-bg="dark"] .gnc-c-bleu{--b:#8FA2FF;--t:#12254A}
+body[data-bg="dark"] .gnc-c-violet{--b:#B79CFF;--t:#2A1B52}
+
+/* ----- Case : illustration + bulles ----- */
+.gn-conv-stage{position:relative;line-height:0}
+.gn-conv-stage img{display:block;width:100%;height:auto}
+.gnc-over{position:absolute;inset:0;pointer-events:none;line-height:1.3}
+.gnc-bub{--ink:#0B0B14;position:absolute;transform:translate(-50%,-50%);width:max-content;max-width:min(46%,260px);color:var(--ink);font:14px/1.3 Arial,Liberation Sans,Roboto,sans-serif;animation:gnc-in .35s ease both;transition:opacity .2s}
+body[data-bg="dark"] .gnc-bub{--ink:#F2EFFA}
+.gnc-bub__in{position:relative}
+.gnc-bub__fill{position:relative;display:block;padding:8px 30px 9px 12px;text-align:left;overflow-wrap:anywhere;hyphens:auto}
+.gnc-bub__ico{position:absolute;top:6px;right:8px;line-height:0}
+.gnc-ico{fill:var(--b);color:var(--b)}
+.gnc-bub__who{display:block;margin-bottom:2px;font-weight:700;font-size:14px}
+.gnc-bub__head{display:flex;align-items:center;gap:6px;margin-bottom:3px;font:800 14px/1.2 Montserrat,Arial,sans-serif;letter-spacing:.02em;text-transform:uppercase}
+.gnc-bub__t{display:block}
+.gnc-tail{position:absolute;display:block}
+
+/* dit : bulle ronde, trait plein */
+.gnc-l-dit .gnc-bub__in{background:var(--t);border:2.5px solid var(--b);border-radius:20px}
+.gnc-l-dit .gnc-tail{width:18px;height:18px;background:var(--t);border:2.5px solid transparent;border-radius:0 0 4px 0}
+/* pense : nuage pointillé + pastilles */
+.gnc-l-pense .gnc-bub__in{background:var(--t);border:2.5px dashed var(--b);border-radius:26px}
+.gnc-l-pense .gnc-tail{width:12px;height:12px;border-radius:50%;background:var(--t);border:2px solid var(--b)}
+.gnc-l-pense .gnc-tail::after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:var(--t);border:2px solid var(--b);transform:translate(calc(var(--ox) * 15px),calc(var(--oy) * 15px))}
+/* ressent : angles coupés + éclair */
+.gnc-l-ressent .gnc-bub__in{padding:3.5px;background:var(--b);clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px)}
+.gnc-l-ressent .gnc-bub__fill{margin:0;background:var(--t);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);padding:7px 12px 8px}
+.gnc-l-ressent .gnc-tail{width:14px;height:20px;background:var(--b);clip-path:polygon(35% 0,100% 0,68% 42%,100% 42%,25% 100%,42% 56%,8% 56%);transform-origin:50% 0;transform:translate(-50%,0) rotate(var(--rot,0deg))}
+
+/* ancre de la queue selon le côté (point du bord de la bulle) */
+.gnc-bub{--ax:50%;--ay:100%;--ox:0;--oy:1;--rot:0deg}
+.gnc-t-b{--ax:50%;--ay:100%;--ox:0;--oy:1;--rot:0deg}
+.gnc-t-bl{--ax:24%;--ay:100%;--ox:-.35;--oy:.94;--rot:0deg}
+.gnc-t-br{--ax:76%;--ay:100%;--ox:.35;--oy:.94;--rot:0deg}
+.gnc-t-t{--ax:50%;--ay:0;--ox:0;--oy:-1;--rot:180deg}
+.gnc-t-tl{--ax:24%;--ay:0;--ox:-.35;--oy:-.94;--rot:180deg}
+.gnc-t-tr{--ax:76%;--ay:0;--ox:.35;--oy:-.94;--rot:180deg}
+.gnc-t-l{--ax:0;--ay:50%;--ox:-1;--oy:0;--rot:90deg}
+.gnc-t-r{--ax:100%;--ay:50%;--ox:1;--oy:0;--rot:-90deg}
+.gnc-tail{left:var(--ax);top:var(--ay)}
+.gnc-l-dit .gnc-tail{transform:translate(-50%,-50%) rotate(45deg)}
+.gnc-l-dit.gnc-t-b .gnc-tail,.gnc-l-dit.gnc-t-bl .gnc-tail,.gnc-l-dit.gnc-t-br .gnc-tail{border-right-color:var(--b);border-bottom-color:var(--b)}
+.gnc-l-dit.gnc-t-t .gnc-tail,.gnc-l-dit.gnc-t-tl .gnc-tail,.gnc-l-dit.gnc-t-tr .gnc-tail{border-left-color:var(--b);border-top-color:var(--b)}
+.gnc-l-dit.gnc-t-l .gnc-tail{border-left-color:var(--b);border-bottom-color:var(--b)}
+.gnc-l-dit.gnc-t-r .gnc-tail{border-right-color:var(--b);border-top-color:var(--b)}
+.gnc-l-pense .gnc-tail{transform:translate(calc(-50% + var(--ox) * 12px),calc(-50% + var(--oy) * 12px))}
+
+@keyframes gnc-in{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.gnc-bub{animation:none;transition:none}}
+
+/* couches (dit / pense / ressent) et mise en avant d'une couleur */
+.gn-conv-root.hide-dit .gnc-l-dit,.gn-conv-root.hide-pense .gnc-l-pense,.gn-conv-root.hide-ressent .gnc-l-ressent{opacity:0;visibility:hidden}
+.gn-conv-root[data-focus="vert"] .gnc-bub:not(.gnc-c-vert),.gn-conv-root[data-focus="jaune"] .gnc-bub:not(.gnc-c-jaune),.gn-conv-root[data-focus="orange"] .gnc-bub:not(.gnc-c-orange),.gn-conv-root[data-focus="rouge"] .gnc-bub:not(.gnc-c-rouge),.gn-conv-root[data-focus="bleu"] .gnc-bub:not(.gnc-c-bleu),.gn-conv-root[data-focus="violet"] .gnc-bub:not(.gnc-c-violet){opacity:.2}
+
+/* repli : pas la place sur l'image, les bulles passent en pile sous l'illustration */
+.gn-conv-stage.is-stack{line-height:1.3}
+.gn-conv-stage.is-stack .gnc-over{position:static;display:grid;gap:22px;padding:14px 18px 22px;background:var(--cl-primary-bg-color,#fff)}
+.gn-conv-stage.is-stack .gnc-bub{position:relative;transform:none;max-width:92%;width:auto;justify-self:start}
+.gn-conv-stage.is-stack .gnc-bub:nth-child(even){justify-self:end}
+.gn-conv-stage.is-stack .gnc-tail{display:none}
+.gn-conv-root.hide-dit .is-stack .gnc-l-dit,.gn-conv-root.hide-pense .is-stack .gnc-l-pense,.gn-conv-root.hide-ressent .is-stack .gnc-l-ressent{display:none}
+
+/* ----- Lecteur ----- */
+.gn-conv-text{margin:0;padding:12px 16px;font-size:14px;line-height:1.5}
+.gn-conv-tools{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px}
+.gn-conv-lay,.gn-conv-reveal,.gn-conv-more{min-height:44px;padding:0 16px;border:2px solid var(--cl-primary-border-color,#E6DFF0);border-radius:999px;background:var(--cl-primary-bg-color,#fff);color:var(--cl-primary-text-color,#17132B);font:700 12.5px/1 Montserrat,Arial,sans-serif;cursor:pointer}
+.gn-conv-lay.on,.gn-conv-reveal.on{background:#0B0B14;border-color:#0B0B14;color:#fff}
+body[data-bg="dark"] .gn-conv-lay.on,body[data-bg="dark"] .gn-conv-reveal.on{background:#F2EFFA;border-color:#F2EFFA;color:#0B0B14}
+.gn-conv-lay:disabled{opacity:.5;cursor:not-allowed}
+.gn-conv-more{background:#2B33C9;border-color:#2B33C9;color:#fff}
+.gn-conv-more[hidden]{display:none}
+.gn-conv-more:disabled{opacity:.5;cursor:default}
+.gn-conv-tools button:focus-visible,.gn-conv-key:focus-visible,.gn-conv-legend summary:focus-visible,.gnc-bub:focus-visible{outline:3px solid #2B33C9;outline-offset:3px}
+.gn-conv-legend{margin:0 0 14px;border:2px solid var(--cl-primary-border-color,#E6DFF0);border-radius:18px;background:var(--cl-primary-bg-color,#fff)}
+.gn-conv-legend summary{cursor:pointer;padding:12px 16px;font:800 13px Montserrat,Arial,sans-serif;min-height:44px;display:flex;align-items:center}
+.gn-conv-legend__b{padding:0 16px 14px;font-size:14px}
+.gn-conv-legend__b p{margin:0 0 10px;max-width:none}
+.gn-conv-shapes,.gn-conv-keys{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.gn-conv-keys{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.gn-conv-key{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;border:2px solid var(--b);border-radius:14px;background:var(--t);color:#0B0B14;text-align:left;font:14px/1.3 Arial,sans-serif;cursor:pointer}
+body[data-bg="dark"] .gn-conv-key{color:#F2EFFA}
+.gn-conv-key[aria-pressed="true"]{box-shadow:0 0 0 3px var(--b)}
+.gn-conv-sw{display:inline-grid;place-items:center;width:26px;height:26px;flex:none}
+.gn-conv-badge{display:inline-block;margin-left:6px;padding:4px 10px;border-radius:999px;background:#FFBE05;color:#0B0B14;font:800 11px/1.2 Montserrat,Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.gn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ----- Éditeur d'administration ----- */
+.gn-conv-ed{display:grid;gap:12px;margin-top:10px;padding-top:12px;border-top:1px dashed var(--gx-line,#E6DFF0)}
+.gn-conv-ed__stage{position:relative;border:2px solid var(--gx-line,#E6DFF0);border-radius:14px;overflow:hidden;background:#EEE8FB;touch-action:none;user-select:none}
+.gn-conv-ed__stage .gn-conv-stage{line-height:0}
+.gn-conv-ed__stage .gnc-over{pointer-events:none}
+.gn-conv-ed__stage .gnc-bub{pointer-events:auto;cursor:grab;touch-action:none}
+.gn-conv-ed__stage .gnc-bub.is-drag{cursor:grabbing;z-index:3;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.gn-conv-ed__stage .gnc-bub.is-sel{outline:3px solid #2B33C9;outline-offset:3px}
+.gn-conv-ed__empty{display:grid;place-items:center;min-height:140px;padding:16px;line-height:1.4;color:#55506B;font-size:13px;text-align:center}
+.gn-conv-ed__list{display:grid;gap:10px}
+.gn-conv-ed__b{display:grid;gap:8px;padding:10px;border:2px solid var(--b);border-radius:14px;background:var(--t)}
+.gn-conv-ed__row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.gn-conv-ed__b label{display:grid;gap:3px;font-size:12px;font-weight:700;color:#0B0B14}
+body[data-bg="dark"] .gn-conv-ed__b label{color:#F2EFFA}
+.gn-conv-ed select,.gn-conv-ed input[type=text],.gn-conv-ed input[type=number],.gn-conv-ed textarea{width:100%;min-height:40px;padding:6px 10px;border:2px solid var(--gx-line,#C9BFE0);border-radius:12px;background:#fff;color:#17132B;font:inherit;font-weight:400}
+.gn-conv-ed textarea{min-height:64px;resize:vertical}
+.gn-conv-ed__count{font-size:12px;font-weight:400;color:#55506B}
+.gn-conv-ed__count.is-over{color:#C8200E;font-weight:700}
+.gn-conv-ed__acts{display:flex;flex-wrap:wrap;gap:6px}
+body[data-bg="dark"] .gn-conv-ed select,body[data-bg="dark"] .gn-conv-ed input[type=text],body[data-bg="dark"] .gn-conv-ed input[type=number],body[data-bg="dark"] .gn-conv-ed textarea{background:#0F0D1E;color:#F2EFFA;border-color:#2B2745}

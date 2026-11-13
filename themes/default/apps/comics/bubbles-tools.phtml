@@ -1,0 +1,27 @@
+<?php /* Commandes du lecteur pour les bulles de conversation + légende des couleurs (le rendu est fait par statics/ganho/js/gn-conv.js). */
+$gn_cols = cl_conv_colors(); ?>
+<div class="gn-conv-tools" role="group" aria-label="Choisir ce qui est affiché dans les cases">
+	<button type="button" class="gn-conv-lay on" data-layer="dit" aria-pressed="true">Ce qu’on dit</button>
+	<button type="button" class="gn-conv-lay on" data-layer="pense" aria-pressed="true">Ce qu’on pense</button>
+	<button type="button" class="gn-conv-lay on" data-layer="ressent" aria-pressed="true">Ce qu’on ressent</button>
+	<button type="button" class="gn-conv-reveal" aria-pressed="false">Révéler pas à pas</button>
+	<button type="button" class="gn-conv-more" hidden>Montrer ce qu’on pense</button>
+</div>
+<p class="gn-conv-live gn-sr" role="status" aria-live="polite"></p>
+
+<details class="gn-conv-legend">
+	<summary>Comprendre les codes couleur</summary>
+	<div class="gn-conv-legend__b">
+		<p>Chaque bulle posée sur l’image a une <b>forme</b>, une <b>couleur</b> et un <b>pictogramme</b> : la couleur n’est jamais seule. Touchez une couleur pour mettre en avant les bulles qui lui correspondent.</p>
+		<ul class="gn-conv-shapes">
+			<li><b>Bulle ronde, trait plein</b> : ce que la personne <b>dit</b> à voix haute.</li>
+			<li><b>Nuage en pointillés</b> : ce que la personne <b>pense</b> sans le dire.</li>
+			<li><b>Bulle à angles coupés, éclair et nom de l’émotion</b> : ce que la personne <b>ressent</b>.</li>
+		</ul>
+		<ul class="gn-conv-keys">
+			<?php foreach ($gn_cols as $k => $meaning): ?>
+				<li><button type="button" class="gn-conv-key gnc-c-<?php echo $k; ?>" data-color="<?php echo $k; ?>" aria-pressed="false"><span class="gn-conv-sw" data-ico="<?php echo $k; ?>"></span><span><b><?php echo cl_edu_h(ucfirst($k)); ?></b> · <?php echo cl_edu_h($meaning); ?></span></button></li>
+			<?php endforeach; ?>
+		</ul>
+	</div>
+</details>

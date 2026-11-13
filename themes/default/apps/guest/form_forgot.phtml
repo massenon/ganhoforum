@@ -1,0 +1,28 @@
+<form class="gx-form" id="cl-resetpass-vue-app" v-on:submit="submit_form($event)" novalidate>
+	<div v-if="process_succeeded != true">
+		<h2 class="gx-card__title">Mot de passe oublié</h2>
+		<p class="gx-card__sub">Saisissez votre adresse e-mail. Vous recevrez un lien pour créer un nouveau mot de passe.</p>
+
+		<div class="gx-errsum" v-cloak v-if="show_summary" ref="summary" tabindex="-1" aria-labelledby="forgot-errsum-title">
+			<p class="gx-errsum__title" id="forgot-errsum-title">Veuillez corriger l'erreur</p>
+			<ul>
+				<li v-for="err in errors"><a v-bind:href="'#' + err.id" v-on:click.prevent="focus_field(err.id)">{{ err.msg }}</a></li>
+			</ul>
+		</div>
+
+		<div class="gx-field">
+			<label for="forgot-email">Adresse e-mail</label>
+			<input id="forgot-email" placeholder="vous@exemple.org" name="email" v-model.trim="$v.email.$model" type="email" class="gx-input" autocomplete="email" spellcheck="false" aria-required="true" v-bind:aria-invalid="err_email ? 'true' : 'false'" v-bind:aria-describedby="err_email ? 'forgot-email-err' : null">
+			<p class="gx-err" id="forgot-email-err" v-cloak v-if="err_email" role="alert">{{ err_email }}</p>
+		</div>
+
+		<button type="submit" class="gn-btn gn-btn--primary gn-btn--lg gx-submit" v-bind:disabled="submitting" v-bind:aria-busy="submitting ? 'true' : 'false'" v-text="submitting ? 'Veuillez patienter…' : 'Envoyer le lien'">Envoyer le lien</button>
+		<p class="gx-switch"><a href="<?php echo cl_link('guest'); ?>">Retour à la connexion</a></p>
+		<input type="hidden" class="d-none" value="<?php echo fetch_or_get($cl['csrf_token'],'none'); ?>" name="hash">
+	</div>
+	<div v-cloak v-else>
+		<h2 class="gx-card__title" ref="sent" tabindex="-1">E-mail envoyé</h2>
+		<p class="gx-notice gx-notice--ok" role="status">Si un compte correspond à cette adresse, vous allez recevoir un e-mail avec les instructions pour réinitialiser votre mot de passe. Pensez à vérifier vos courriers indésirables.</p>
+		<a class="gn-btn gn-btn--primary gn-btn--lg gx-submit" href="<?php echo cl_link('guest'); ?>">Retour à la connexion</a>
+	</div>
+</form>

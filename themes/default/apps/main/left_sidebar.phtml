@@ -1,0 +1,209 @@
+<div class="left-sb-container sidebar" data-app="left-sidebar">
+	<div class="sidebar__inner">
+		<div class="sidebar__nav">
+			<div class="sidebar__nav-group">
+				<div data-navitem="profile" class="sidebar__nav-item <?php if($cl['pn'] == 'profile' && not_empty($cl["page_xdata"]) && not_empty($cl["page_xdata"]["is_me"])) {echo('active');} ?>">
+					<span class="icon avatar">
+						<img src="<?php echo($me['avatar']); ?>" alt="Votre photo de profil" title="Votre photo de profil" width="48" height="48" decoding="async">
+					</span>
+					<span class="text">
+						<a href="<?php echo($me["url"]); ?>" data-spa="true">
+							<?php echo($me["name"]); ?>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="home" class="sidebar__nav-item <?php if($cl['pn'] == 'home') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('feed'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link('/'); ?>" data-spa="true">
+							<?php echo cl_translate('Timeline'); ?>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="notifications" class="sidebar__nav-item <?php if($cl['pn'] == 'notifications') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('notifications'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("notifications"); ?>" data-spa="true">
+							<?php echo cl_translate('Notifications'); ?>
+							<span class="info-indicators" data-an="new-notifs"><?php echo fetch_or_get($me['new_notifs']); ?></span>
+						</a>
+					</span>
+				</div>
+				
+				<div data-navitem="trending" class="sidebar__nav-item <?php if($cl['pn'] == 'trending') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('whatshot'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link('trending'); ?>" data-spa="true">
+							<?php echo cl_translate('Trending'); ?>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="search" class="sidebar__nav-item <?php if($cl['pn'] == 'search') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('tag'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("search"); ?>" data-spa="true">
+							<?php echo cl_translate('Explore'); ?>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="chat" class="sidebar__nav-item <?php if($cl['pn'] == 'chat') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('chat'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("chats"); ?>" data-spa="true">
+							<?php echo cl_translate('Messages'); ?>
+							<span class="info-indicators" data-an="new-messages"><?php echo fetch_or_get($me['new_messages']); ?></span>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="bookmarks" class="sidebar__nav-item <?php if($cl['pn'] == 'bookmarks') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('bookmark'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("bookmarks"); ?>" data-spa="true">
+							<?php echo cl_translate('Bookmarks'); ?>
+						</a>
+					</span>
+				</div>
+				<div data-navitem="alert" class="sidebar__nav-item <?php if($cl['pn'] == 'alert') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('chat'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("alert"); ?>" data-spa="true">
+							Créer une alerte VBG
+						</a>
+					</span>
+				</div>
+				<div data-navitem="educational" class="sidebar__nav-item <?php if($cl['pn'] == 'educational') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('school'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("contenus-educatifs"); ?>" data-spa="true">
+							Contenus éducatifs
+						</a>
+					</span>
+				</div>
+				<div data-navitem="comics" class="sidebar__nav-item <?php if($cl['pn'] == 'comics') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('auto_stories'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("bandes-dessinees"); ?>" data-spa="true">
+							Bandes dessinées
+						</a>
+					</span>
+				</div>
+			</div>
+			<div class="sidebar__nav-group sidebar__nav-group_collapse">
+				<div class="sidebar__nav-item-devider"></div>
+				<?php if (not_empty($cl['is_admin'])): ?>
+					<div class="sidebar__nav-item">
+						<span class="icon">
+							<?php echo cl_icon('admin_panel'); ?>
+						</span>
+						<span class="text">
+							<a href="<?php echo cl_link("admin_panel"); ?>">
+								<?php echo cl_translate('Control panel'); ?>
+							</a>
+						</span>
+					</div>
+				<?php endif; ?>
+				
+				
+				<?php
+				global $db;
+				$gn_is_mod = false;
+				if (empty($cl['is_admin']) && !empty($cl['is_logged'])) {
+					try { $gn_m = $db->rawQueryOne("SELECT 1 AS ok FROM `cl_adm_roles` WHERE user_id = ? AND role = 'moderator'", array((int) $me['id'])); $gn_is_mod = !empty($gn_m); } catch (\Throwable $e) { $gn_is_mod = false; }
+				}
+				?>
+				<?php if ($gn_is_mod): ?>
+					<div class="sidebar__nav-item">
+						<span class="icon"><?php echo cl_icon('admin_panel'); ?></span>
+						<span class="text"><a href="<?php echo cl_link("admin_panel/moderation_queue"); ?>">Modération</a></span>
+					</div>
+				<?php endif; ?>
+				<div data-navitem="events" class="sidebar__nav-item <?php if($cl['pn'] == 'events') {echo('active');} ?>">
+					<span class="icon"><?php echo cl_icon('calendar'); ?></span>
+					<span class="text"><a href="<?php echo cl_link("evenements"); ?>" data-spa="true">Événements</a></span>
+				</div>
+				<div data-navitem="suggest" class="sidebar__nav-item <?php if($cl['pn'] == 'suggest') {echo('active');} ?>">
+					<span class="icon"><?php echo cl_icon('feather'); ?></span>
+					<span class="text"><a href="<?php echo cl_link("suggest"); ?>" data-spa="true">Boîte à suggestions</a></span>
+				</div>
+				<div class="sidebar__nav-item-devider"></div>
+				<div data-navitem="settings" class="sidebar__nav-item <?php if($cl['pn'] == 'settings') {echo('active');} ?>">
+					<span class="icon">
+						<?php echo cl_icon('manage_account'); ?>
+					</span>
+					<span class="text">
+						<a href="<?php echo cl_link("settings"); ?>" data-spa="true">
+							<?php echo cl_translate('Profile settings'); ?>
+						</a>
+					</span>
+				</div>
+				<div class="sidebar__nav-item">
+					<span class="icon">
+						<?php echo cl_icon('display_settings'); ?>
+					</span>
+					<span class="text">
+						<a href="javascript:void(0);" onclick="SMColibri.display_settings();">
+							<?php echo cl_translate('Display settings'); ?>
+						</a>
+					</span>
+				</div>
+			</div>
+			<div class="sidebar__nav-group sidebar__nav-group_toggle">
+				<div class="sidebar__nav-item-devider"></div>
+				<div class="sidebar__nav-item" onclick="SMColibri.toggleSBMenu(this);">
+					<span class="icon">
+						<?php echo cl_icon('more_horiz'); ?>
+					</span>
+					<span class="text">
+						<a href="javascript:void(0);" >
+							<?php echo cl_translate('More'); ?>
+						</a>
+					</span>
+				</div>
+			</div>
+		</div>
+		<div class="sidebar__footer">
+			<?php echo cl_template('main/footer'); ?>
+		</div>
+		<div class="sidebar__button">
+			<button class="btn btn-custom main-inline lg btn-block" data-toggle="modal" data-target="#add_new_post">
+				<span class="d-inline-flex flex-wn align-items-center">
+					<span class="flex-item btn-icon">
+						<?php echo cl_icon('feather'); ?>
+					</span>
+					<span class="flex-item">
+						<?php echo cl_translate('New post'); ?>
+					</span>
+				</span>
+			</button>
+			<button type="button" class="btn btn-custom main-red lg btn-block gn-logout-btn" onclick="SMColibri.logout();">
+				<span class="d-inline-flex flex-wn align-items-center">
+					<span class="flex-item btn-icon">
+						<?php echo cl_icon('logout'); ?>
+					</span>
+					<span class="flex-item">
+						<?php echo cl_translate('Logout'); ?>
+					</span>
+				</span>
+			</button>
+		</div>
+	</div>
+</div>
+

@@ -1,0 +1,40 @@
+<div class="timeline-container gn-bd" data-app="comics">
+	<div class="timeline-header" data-el="tl-header">
+		<div class="timeline-header__topline"><div data-el="timeline-bs-notifs" class="timeline-bs-notifs"></div></div>
+		<div class="timeline-header__botline">
+			<div class="lp"><div class="nav-link-holder"><a href="<?php echo cl_link('bandes-dessinees'); ?>" data-spa="true">Bandes dessinées</a></div></div>
+			<div class="cp"><a href="<?php echo cl_link('/'); ?>"><img src="{%config site_logo%}" alt="Logo"></a></div>
+		</div>
+	</div>
+
+	<div class="gn-edu__intro">
+		<h1>Des histoires courtes pour comprendre</h1>
+		<p>Quelques cases suffisent pour reconnaître une situation, savoir quoi faire et rappeler que l’on n’est jamais seul·e.</p>
+	</div>
+
+	<link rel="stylesheet" href="<?php echo cl_link('themes/default/statics/ganho/css/gn-conv.css?v=' . @filemtime(cl_full_path('themes/default/statics/ganho/css/gn-conv.css'))); ?>">
+	<?php if (not_empty($cl["bd_items"])): ?>
+		<ul class="gn-edu__grid">
+			<?php foreach ($cl["bd_items"] as $c): ?>
+				<li>
+					<article class="gn-edu-card gn-bd-card">
+						<a class="gn-edu-card__link" href="<?php echo $c['url']; ?>" data-spa="true">
+							<span class="gn-edu-card__img gn-edu-card__img--bd">
+								<?php if ($c["cover_url"] !== ""): ?><img src="<?php echo cl_edu_h($c['cover_url']); ?>" alt="" loading="lazy" decoding="async"><?php endif; ?>
+								<b class="gn-edu-card__pin"><?php echo $c["panel_count"]; ?> cases</b>
+							</span>
+							<span class="gn-edu-card__body">
+								<span class="gn-edu-card__cat"><?php echo cl_edu_h($c["category_label"]); ?><?php if (!empty($c["has_bubbles"])): ?> <span class="gn-conv-badge">Avec bulles de conversation</span><?php endif; ?></span>
+								<span class="gn-edu-card__title"><?php echo cl_edu_h($c["title"]); ?></span>
+								<span class="gn-edu-card__sum"><?php echo cl_edu_h($c["summary"]); ?></span>
+								<span class="gn-edu-card__meta">Lire en 2 minutes</span>
+							</span>
+						</a>
+					</article>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	<?php else: ?>
+		<p class="gn-edu__empty">Aucune bande dessinée publiée pour le moment.</p>
+	<?php endif; ?>
+</div>

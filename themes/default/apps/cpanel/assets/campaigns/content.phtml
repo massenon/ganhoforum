@@ -1,0 +1,172 @@
+<div class="cp-app-container gn-cmp" data-app="campaigns" id="vue-cmp-app" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>Diffusions d’informations</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Campagnes e-mail</a></li>
+            </ol>
+        </div>
+        <div class="rp">
+            <button type="button" class="btn btn-primary" v-on:click="open_new">+ Nouvelle diffusion</button>
+        </div>
+    </div>
+
+    <div class="gn-cmp-kpis" role="list">
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ kpis.sent }}</span><span class="gn-cmp-kpi__l">Total envoyé</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ kpis.open_rate }}&nbsp;%</span><span class="gn-cmp-kpi__l">Taux d’ouverture moyen</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ kpis.scheduled }}</span><span class="gn-cmp-kpi__l">Envois programmés</span></div>
+    </div>
+
+    <div class="card">
+        <div class="header gn-cmp-filters">
+            <label class="gn-cmp-search"><span class="gn-sr">Rechercher</span><input type="search" v-model.trim="f.q" placeholder="Rechercher une diffusion…"></label>
+            <label><span class="gn-sr">Statut</span>
+                <select v-model="f.status">
+                    <option value="">Tous les statuts</option>
+                    <option v-for="(label, key) in statuses" v-bind:value="key">{{ label }}</option>
+                </select>
+            </label>
+            <label><span class="gn-sr">Audience</span>
+                <select v-model="f.audience">
+                    <option value="">Toutes les audiences</option>
+                    <option v-for="(label, key) in audiences" v-bind:value="key">{{ label }}</option>
+                </select>
+            </label>
+        </div>
+        <div class="body gn-cmp-tablewrap">
+            <table class="table gn-cmp-table">
+                <thead>
+                    <tr><th>Titre de l’info</th><th>Audience cible</th><th>Modèle utilisé</th><th>Statut</th><th>Date d’envoi</th><th class="gn-cmp-actions-h">Actions</th></tr>
+                </thead>
+                <tbody v-if="filtered.length">
+                    <tr v-for="c in filtered" v-bind:key="c.id">
+                        <td><b>{{ c.title }}</b><small class="gn-cmp-sub">{{ c.subject }}</small></td>
+                        <td>{{ c.audience_label }}</td>
+                        <td>{{ c.template_name }}</td>
+                        <td>
+                            <span class="gn-badge" v-bind:class="'gn-badge--' + c.status">{{ statuses[c.status] }}</span>
+                            <small class="gn-cmp-sub" v-if="c.total > 0">{{ c.sent_count }}/{{ c.total }} envoyés<span v-if="c.failed_count > 0">, {{ c.failed_count }} en échec</span><span v-if="c.sent_count > 0"> · {{ Math.round(100 * c.open_count / c.sent_count) }} % d’ouvertures</span></small>
+                        </td>
+                        <td>{{ c.date_fr }}</td>
+                        <td class="gn-cmp-actions">
+                            <button type="button" class="gn-icon-btn" title="Aperçu" aria-label="Aperçu" v-on:click="preview_row(c)"><?php echo cl_ikon('eye'); ?></button>
+                            <button type="button" class="gn-icon-btn" title="Modifier" aria-label="Modifier" v-bind:disabled="c.status === 'sent' || c.status === 'sending'" v-on:click="open_edit(c)"><?php echo cl_ikon('edit'); ?></button>
+                            <button type="button" class="gn-icon-btn" title="Dupliquer" aria-label="Dupliquer" v-on:click="duplicate(c)"><?php echo cl_ikon('copy'); ?></button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--danger" title="Supprimer" aria-label="Supprimer" v-on:click="ask_delete(c)"><?php echo cl_ikon('delete'); ?></button>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody v-else>
+                    <tr><td colspan="6" class="gn-cmp-empty">
+                        <p v-if="campaigns.length === 0">Aucune diffusion pour le moment. Créez la première pour informer vos membres.</p>
+                        <p v-else>Aucune diffusion ne correspond à ces filtres.</p>
+                        <button type="button" class="btn btn-primary" v-if="campaigns.length === 0" v-on:click="open_new">+ Nouvelle diffusion</button>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tiroir de création / modification : 3 étapes -->
+    <div class="gn-drawer" v-if="drawer.open" role="dialog" aria-modal="true" aria-labelledby="gn-drawer-title">
+        <div class="gn-drawer__backdrop" v-on:click="close_drawer"></div>
+        <div class="gn-drawer__panel">
+            <header class="gn-drawer__head">
+                <h3 id="gn-drawer-title">{{ form.id ? 'Modifier la diffusion' : 'Nouvelle diffusion' }}</h3>
+                <button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="close_drawer">&times;</button>
+            </header>
+            <ol class="gn-steps">
+                <li v-bind:class="{active: step === 1, done: step > 1}"><span>1</span> Informations</li>
+                <li v-bind:class="{active: step === 2, done: step > 2}"><span>2</span> Audience</li>
+                <li v-bind:class="{active: step === 3}"><span>3</span> Planification</li>
+            </ol>
+
+            <div class="gn-drawer__body">
+                <p class="gn-cmp-err" role="alert" v-if="err.message">{{ err.message }}</p>
+
+                <div v-show="step === 1">
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'title'}"><label for="cmp-title">Titre interne</label><input id="cmp-title" type="text" maxlength="190" v-model.trim="form.title" placeholder="Ex. Newsletter de décembre"></div>
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'subject'}"><label for="cmp-subject">Objet du mail</label><input id="cmp-subject" type="text" maxlength="190" v-model.trim="form.subject" placeholder="Ce que vos membres verront dans leur boîte de réception"></div>
+                    <div class="gn-field"><label for="cmp-pre">Pré-en-tête</label><input id="cmp-pre" type="text" maxlength="190" v-model.trim="form.preheader" placeholder="Courte phrase affichée après l’objet"></div>
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'template_id'}">
+                        <label for="cmp-tpl">Modèle</label>
+                        <select id="cmp-tpl" v-model.number="form.template_id" v-on:change="on_template">
+                            <option v-bind:value="0" disabled>Choisir un modèle…</option>
+                            <option v-for="t in templates" v-bind:value="t.id">{{ t.name }}</option>
+                        </select>
+                        <small><a href="<?php echo cl_link('admin_panel/email_templates'); ?>">Gérer les modèles</a></small>
+                    </div>
+                    <div class="gn-field"><label for="cmp-date">Date de l’événement (variable <code v-pre>{{date_evenement}}</code>)</label><input id="cmp-date" type="text" maxlength="60" v-model.trim="form.event_date" placeholder="Ex. samedi 20 décembre, 15 h"></div>
+                    <div class="gn-field"><label for="cmp-body">Message (facultatif : remplace le texte du modèle)</label><textarea id="cmp-body" rows="5" v-model="form.body" v-bind:placeholder="body_ph"></textarea></div>
+                </div>
+
+                <div v-show="step === 2">
+                    <fieldset class="gn-radios">
+                        <legend>À qui envoyer cette information ?</legend>
+                        <label v-for="(label, key) in audiences" v-bind:key="key" class="gn-radio" v-bind:class="{on: form.audience === key}">
+                            <input type="radio" name="cmp-aud" v-bind:value="key" v-model="form.audience">
+                            <span class="gn-radio__t">{{ label }}</span>
+                            <span class="gn-radio__n">{{ counts[key] === undefined ? '…' : counts[key] }} destinataire(s)</span>
+                        </label>
+                    </fieldset>
+                </div>
+
+                <div v-show="step === 3">
+                    <fieldset class="gn-radios">
+                        <legend>Quand l’envoyer ?</legend>
+                        <label class="gn-radio" v-bind:class="{on: form.mode === 'now'}"><input type="radio" name="cmp-mode" value="now" v-model="form.mode"><span class="gn-radio__t">Envoi immédiat</span><span class="gn-radio__n">Part dès que vous validez</span></label>
+                        <label class="gn-radio" v-bind:class="{on: form.mode === 'later'}"><input type="radio" name="cmp-mode" value="later" v-model="form.mode"><span class="gn-radio__t">Programmer</span><span class="gn-radio__n">Choisir une date et une heure</span></label>
+                        <label class="gn-radio" v-bind:class="{on: form.mode === 'draft'}"><input type="radio" name="cmp-mode" value="draft" v-model="form.mode"><span class="gn-radio__t">Brouillon</span><span class="gn-radio__n">Enregistrer sans envoyer</span></label>
+                    </fieldset>
+                    <div class="gn-field" v-if="form.mode === 'later'" v-bind:class="{'has-error': err.field === 'scheduled_at'}"><label for="cmp-when">Date et heure d’envoi</label><input id="cmp-when" type="datetime-local" v-model="form.scheduled_at"><small>Les envois programmés partent via la tâche planifiée (cron) du serveur : <code>core/cron/send_campaigns.php</code>.</small></div>
+                    <div class="gn-recap">
+                        <b>Récapitulatif</b>
+                        <p>« {{ form.subject }} » · modèle {{ tpl_name }} · {{ audiences[form.audience] }} ({{ counts[form.audience] === undefined ? '…' : counts[form.audience] }} destinataire(s))</p>
+                        <button type="button" class="btn btn-default" v-on:click="preview_form">Aperçu</button>
+                        <button type="button" class="btn btn-default" v-bind:disabled="busy" v-on:click="send_test">Envoyer un test à mon adresse</button>
+                    </div>
+                    <p class="gn-cmp-ok" role="status" v-if="info">{{ info }}</p>
+                </div>
+
+                <div class="gn-progress" v-if="sending.active" role="status">
+                    <div class="gn-progress__bar"><i v-bind:style="{width: sending.pct + '%'}"></i></div>
+                    <p>Envoi en cours : {{ sending.sent }} envoyé(s)<span v-if="sending.failed"> · {{ sending.failed }} échec(s)</span> sur {{ sending.total }}. Ne fermez pas cette page.</p>
+                </div>
+            </div>
+
+            <footer class="gn-drawer__foot">
+                <button type="button" class="btn btn-default" v-if="step > 1" v-bind:disabled="busy" v-on:click="step--">Retour</button>
+                <span class="gn-drawer__spacer"></span>
+                <button type="button" class="btn btn-primary" v-if="step < 3" v-on:click="next">Continuer</button>
+                <button type="button" class="btn btn-primary" v-if="step === 3" v-bind:disabled="busy" v-on:click="submit">{{ submit_label }}</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Aperçu -->
+    <div class="gn-drawer gn-drawer--center" v-if="pv.open" role="dialog" aria-modal="true" aria-label="Aperçu de l’e-mail">
+        <div class="gn-drawer__backdrop" v-on:click="pv.open = false"></div>
+        <div class="gn-modal">
+            <header class="gn-drawer__head"><h3>Aperçu de l’e-mail</h3>
+                <div class="gn-seg" role="group" aria-label="Taille d’écran"><button type="button" v-bind:class="{on: pv.device === 'desktop'}" v-on:click="pv.device = 'desktop'">Ordinateur</button><button type="button" v-bind:class="{on: pv.device === 'mobile'}" v-on:click="pv.device = 'mobile'">Mobile</button></div>
+                <button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="pv.open = false">&times;</button>
+            </header>
+            <div class="gn-pv"><iframe title="Aperçu" sandbox="" v-bind:srcdoc="pv.html" v-bind:style="{width: pv.device === 'mobile' ? '320px' : '600px'}"></iframe></div>
+        </div>
+    </div>
+
+    <!-- Confirmation de suppression -->
+    <div class="gn-drawer gn-drawer--center" v-if="del.open" role="alertdialog" aria-modal="true" aria-labelledby="gn-del-t">
+        <div class="gn-drawer__backdrop" v-on:click="del.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-del-t">Supprimer cette diffusion ?</h3>
+            <p>« {{ del.item && del.item.title }} » sera définitivement supprimée, avec son suivi d’envoi. Cette action est irréversible.</p>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="del.open = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn gn-btn-danger" v-on:click="do_delete">Supprimer</button></div>
+        </div>
+    </div>
+
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<?php echo cl_template('cpanel/assets/campaigns/scripts/app_master_script'); ?>

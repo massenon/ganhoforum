@@ -1,0 +1,148 @@
+<script>
+	"use strict";
+
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+		var BASE = '<?php echo cl_link("/"); ?>'.replace(/\/?$/, '/');
+		var seq = 0;
+
+		function call(action, data) {
+			return $.ajax({url: API + action, type: 'POST', data: data || {}, dataType: 'json'});
+		}
+		var EMO = <?php echo cl_minify_js(json($cl["conv_emotions"], true)); ?>;
+		function bubble(x) {
+			x = x || {};
+			return {k: ++seq, type: x.type || 'dit', text: x.text || '', color: x.color || 'vert', emotion: x.emotion || '', x: x.x === undefined ? 50 : +x.x, y: x.y === undefined ? 20 : +x.y, tail: x.tail || 'b', who: x.who || ''};
+		}
+		function panel(p) {
+			p = p || {};
+			return {k: ++seq, image: p.image || '', caption: p.caption || '', dialogue: p.dialogue || '', alt: p.alt || '', sel: -1, bubbles: (p.bubbles || []).map(bubble)};
+		}
+		function blank() {
+			return {id: 0, title: '', category: '', summary: '', cover: '', status: 'draft', pinned: false, panels: [panel(), panel()]};
+		}
+		function r1(v) { return Math.max(5, Math.min(95, Math.round(v * 10) / 10)); }
+
+		SMC_CPanel.BD = new Vue({
+			el: '#vue-bd-app',
+			data: {
+				comics: <?php echo cl_minify_js(json($cl["edu_comics"], true)); ?>,
+				categories: <?php echo cl_minify_js(json($cl["edu_categories"], true)); ?>,
+				colors: <?php echo cl_minify_js(json($cl["conv_colors"], true)); ?>,
+				emotions: EMO,
+				tails: <?php echo cl_minify_js(json($cl["conv_tails"], true)); ?>,
+				f: {q: '', status: ''},
+				drawer: false,
+				form: blank(),
+				err: {message: '', field: ''},
+				busy: false,
+				del: {open: false, item: null},
+				toast: ''
+			},
+			computed: {
+				filtered: function() {
+					var f = this.f, q = f.q.toLowerCase();
+					return this.comics.filter(function(c) {
+						return (!f.status || c.status === f.status) && (!q || (c.title + ' ' + c.summary).toLowerCase().indexOf(q) !== -1);
+					});
+				},
+				total_panels: function() { return this.comics.reduce(function(n, c) { return n + c.panel_count; }, 0); }
+			},
+			methods: {
+				say: function(t) { var _this = this; this.toast = t; setTimeout(function() { _this.toast = ''; }, 3500); },
+				count_status: function(s) { return this.comics.filter(function(i) { return i.status === s; }).length; },
+				img_src: function(p) { return /^https?:\/\//i.test(p) ? p : BASE + p; },
+				open_new: function() { this.form = blank(); this.err = {message: '', field: ''}; this.drawer = true; },
+				open_edit: function(c) {
+					this.form = {id: c.id, title: c.title, category: c.category, summary: c.summary, cover: c.cover, status: c.status, pinned: !!c.pinned, panels: c.panels_list.map(panel)};
+					if (!this.form.panels.length) { this.form.panels = [panel(), panel()]; }
+					this.err = {message: '', field: ''}; this.drawer = true;
+				},
+				close_drawer: function() { if (!this.busy) { this.drawer = false; } },
+				add_panel: function() { this.form.panels.push(panel()); },
+				add_bubble: function(p) { if (p.bubbles.length < 6) { p.bubbles.push(bubble({y: 15 + p.bubbles.length * 22})); p.sel = p.bubbles.length - 1; } },
+				remove_bubble: function(p, i) { p.bubbles.splice(i, 1); p.sel = -1; },
+				move_bubble: function(p, i, d) { var a = p.bubbles, j = i + d; if (j < 0 || j >= a.length) { return; } a.splice(j, 0, a.splice(i, 1)[0]); p.sel = j; },
+				on_type: function(bb) { if (bb.type === 'ressent' && !bb.emotion) { bb.emotion = this.default_emotion(bb.color); } },
+				on_emotion: function(bb) { if (EMO[bb.emotion]) { bb.color = EMO[bb.emotion][1]; } },
+				default_emotion: function(color) { for (var k in EMO) { if (EMO[k][1] === color) { return k; } } return 'calme'; },
+				clamp_xy: function(bb) { bb.x = r1(+bb.x || 50); bb.y = r1(+bb.y || 20); },
+				bubbles_html: function(p) { return window.GNConv ? window.GNConv.overlayHtml(p.bubbles, true, p.sel) : ''; },
+				/* glisser-déposer d'une bulle sur l'aperçu (pointeur : souris, doigt, stylet) */
+				drag_start: function(e, p) {
+					var el = e.target.closest ? e.target.closest('.gnc-bub') : null;
+					if (!el || (e.button !== undefined && e.button > 0)) { return; }
+					var st = el.closest('.gn-conv-stage'), idx = +el.getAttribute('data-idx'), bb = p.bubbles[idx], _this = this;
+					if (!bb) { return; }
+					e.preventDefault();
+					p.sel = idx;
+					var r = st.getBoundingClientRect();
+					var dx = e.clientX - (r.left + bb.x / 100 * r.width), dy = e.clientY - (r.top + bb.y / 100 * r.height);
+					function mv(ev) { bb.x = r1((ev.clientX - dx - r.left) / r.width * 100); bb.y = r1((ev.clientY - dy - r.top) / r.height * 100); }
+					function up() {
+						document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+						_this.refocus(st, idx);
+					}
+					document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+				},
+				/* déplacement au clavier : flèches (1 %), Maj + flèches (5 %) */
+				key_move: function(e, p) {
+					var el = e.target.closest ? e.target.closest('.gnc-bub') : null;
+					if (!el) { return; }
+					var idx = +el.getAttribute('data-idx'), bb = p.bubbles[idx], step = e.shiftKey ? 5 : 1, _this = this;
+					if (!bb) { return; }
+					var d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
+					if (!d) { return; }
+					e.preventDefault();
+					bb.x = r1(bb.x + d[0]); bb.y = r1(bb.y + d[1]); p.sel = idx;
+					_this.refocus(el.closest('.gn-conv-stage'), idx);
+				},
+				refocus: function(st, idx) {
+					this.$nextTick(function() { var n = st.querySelector('.gnc-bub[data-idx="' + idx + '"]'); if (n) { n.focus({preventScroll: true}); } });
+				},
+				move: function(i, d) {
+					var a = this.form.panels, j = i + d;
+					if (j < 0 || j >= a.length) { return; }
+					a.splice(j, 0, a.splice(i, 1)[0]);
+				},
+				upload: function(ev, i) {
+					var _this = this, file = ev.target.files && ev.target.files[0];
+					if (!file) { return; }
+					var fd = new FormData(); fd.append('file', file);
+					$.ajax({url: API + 'edu_upload', type: 'POST', data: fd, processData: false, contentType: false, dataType: 'json'}).done(function(d) {
+						if (d.status !== 200) { _this.err = {message: d.message || 'Envoi impossible.', field: ''}; return; }
+						if (i === null) { _this.form.cover = d.path; } else { _this.form.panels[i].image = d.path; }
+						_this.say('Image envoyée.');
+					}).fail(function() { _this.err = {message: 'Erreur réseau.', field: ''}; });
+					ev.target.value = '';
+				},
+				save: function() {
+					var _this = this, f = this.form;
+					this.err = {message: '', field: ''}; this.busy = true;
+					var panels = f.panels.map(function(p) {
+						return {image: p.image, caption: p.caption, dialogue: p.dialogue, alt: p.alt, bubbles: p.bubbles.filter(function(x) { return String(x.text).trim() !== ''; }).map(function(x) { return {type: x.type, text: String(x.text).trim(), color: x.color, emotion: x.type === 'ressent' ? x.emotion : '', x: x.x, y: x.y, tail: x.tail, who: x.who}; })};
+					});
+					call('edu_comic_save', {id: f.id, title: f.title, category: f.category, summary: f.summary, cover: f.cover, status: f.status, pinned: f.pinned ? 1 : 0, panels: JSON.stringify(panels)}).done(function(d) {
+						_this.busy = false;
+						if (d.status === 200) { _this.comics = d.comics; _this.drawer = false; _this.say(f.status === 'published' ? 'Bande dessinée publiée.' : 'Brouillon enregistré.'); }
+						else { _this.err = {message: d.message || 'Enregistrement impossible.', field: d.field || ''}; }
+					}).fail(function() { _this.busy = false; _this.err = {message: 'Erreur réseau.', field: ''}; });
+				},
+				toggle: function(c) {
+					var _this = this;
+					call('edu_comic_toggle', {id: c.id}).done(function(d) {
+						if (d.status === 200) { _this.comics = d.comics; _this.say('Statut mis à jour.'); } else { _this.say(d.message || 'Action impossible.'); }
+					});
+				},
+				duplicate: function(c) {
+					var _this = this;
+					call('edu_comic_duplicate', {id: c.id}).done(function(d) { if (d.status === 200) { _this.comics = d.comics; _this.say('Dupliquée en brouillon.'); } });
+				},
+				do_delete: function() {
+					var _this = this, c = this.del.item;
+					call('edu_comic_delete', {id: c.id}).done(function(d) { _this.del.open = false; if (d.status === 200) { _this.comics = d.comics; _this.say('Bande dessinée supprimée.'); } });
+				}
+			}
+		});
+	});
+</script>

@@ -1,0 +1,47 @@
+<div class="timeline-container" data-app="suggest">
+<style>
+.gnsg{max-width:640px;margin:0 auto;padding:20px}
+.gnsg h1{font:800 1.3rem/1.2 Montserrat,system-ui,sans-serif;margin:0 0 6px}
+.gnsg p{color:#55506B;margin:0 0 16px}
+.gnsg label{display:block;margin:0 0 6px;font:700 .85rem Montserrat,system-ui,sans-serif}
+.gnsg input,.gnsg textarea{display:block;width:100%;box-sizing:border-box;margin-bottom:14px;padding:12px 14px;border:2px solid #E6DFF0;border-radius:14px;font:inherit;font-size:.9rem;background:#fff;color:#17132B}
+.gnsg input:focus,.gnsg textarea:focus{outline:none;border-color:#2B33C9;box-shadow:0 0 0 4px rgba(43,51,201,.18)}
+.gnsg button{min-height:46px;padding:0 24px;border:0;border-radius:999px;background:#2B33C9;color:#fff;font:700 .9rem Montserrat,system-ui,sans-serif;cursor:pointer}
+.gnsg button:disabled{opacity:.6}
+.gnsg__msg{margin-top:14px;padding:12px 14px;border-radius:14px;font-weight:700}
+.gnsg__msg.ok{background:#E4F6EE;color:#0B6B3A}.gnsg__msg.err{background:#FDE7E3;color:#8A1708}
+</style>
+<div class="gnsg">
+<?php if (empty($cl['is_logged'])): ?>
+	<h1>Boîte à suggestions</h1>
+	<p>Connectez-vous pour proposer une idée ou un retour à l’équipe.</p>
+	<a class="btn btn-custom main-inline md" href="<?php echo cl_link('guest'); ?>">Se connecter</a>
+<?php else: ?>
+	<h1>Boîte à suggestions</h1>
+	<p>Une idée pour améliorer le forum, un retour sur ce qui ne va pas ? L’équipe lit tous les messages. Merci de ne pas y mettre d’informations personnelles sensibles.</p>
+	<form id="gnsg-form" autocomplete="off">
+		<label for="gnsg-subject">Sujet</label>
+		<input id="gnsg-subject" name="subject" type="text" maxlength="160" required>
+		<label for="gnsg-message">Votre message</label>
+		<textarea id="gnsg-message" name="message" rows="6" maxlength="2000" required></textarea>
+		<button type="submit">Envoyer ma suggestion</button>
+		<div id="gnsg-out" role="status"></div>
+	</form>
+	<script>
+	(function () {
+		var f = document.getElementById('gnsg-form'); if (!f) { return; }
+		f.addEventListener('submit', function (e) {
+			e.preventDefault();
+			var b = f.querySelector('button'), out = document.getElementById('gnsg-out'); b.disabled = true;
+			fetch('<?php echo cl_link("native_api/suggest/send"); ?>', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams(new FormData(f)).toString()})
+			.then(function (r) { return r.json(); }).then(function (d) {
+				out.className = 'gnsg__msg ' + (d.status == 200 ? 'ok' : 'err');
+				out.textContent = d.status == 200 ? 'Merci ! Votre suggestion a été transmise à l’équipe.' : (d.message || 'Envoi impossible.');
+				if (d.status == 200) { f.reset(); }
+			}).catch(function () { out.className = 'gnsg__msg err'; out.textContent = 'Erreur réseau.'; }).then(function () { b.disabled = false; });
+		});
+	})();
+	</script>
+<?php endif; ?>
+</div>
+</div>

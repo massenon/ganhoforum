@@ -1,0 +1,88 @@
+<div class="cp-app-container gn-cmp" data-app="email-templates" id="vue-tpl-app" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>Modèles d’e-mail</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Modèles d’e-mail</a></li>
+            </ol>
+        </div>
+        <div class="rp" v-if="!editing">
+            <button type="button" class="btn btn-primary" v-on:click="open_new">+ Nouveau modèle</button>
+        </div>
+    </div>
+
+    <!-- Galerie -->
+    <div class="gn-gallery" v-if="!editing">
+        <article class="gn-tcard" v-for="t in templates" v-bind:key="t.id">
+            <div class="gn-thumb" v-bind:class="'gn-thumb--' + t.kind" aria-hidden="true">
+                <i class="gn-thumb__logo"></i><i class="gn-thumb__bar"></i>
+                <div class="gn-thumb__card"><b></b><s></s><s></s><s class="short"></s><em></em></div>
+            </div>
+            <div class="gn-tcard__body">
+                <h3>{{ t.name }}</h3>
+                <p>{{ t.subject || 'Sans objet par défaut' }}</p>
+                <small>Modifié le {{ t.updated_fr }}</small>
+            </div>
+            <div class="gn-tcard__foot">
+                <a class="btn btn-primary" v-bind:href="use_url(t)">Utiliser ce modèle</a>
+                <button type="button" class="gn-icon-btn" title="Modifier" aria-label="Modifier" v-on:click="open_edit(t)"><?php echo cl_ikon('edit'); ?></button>
+                <button type="button" class="gn-icon-btn gn-icon-btn--danger" title="Supprimer" aria-label="Supprimer" v-on:click="del = {open: true, item: t}"><?php echo cl_ikon('delete'); ?></button>
+            </div>
+        </article>
+        <p class="gn-cmp-empty" v-if="templates.length === 0">Aucun modèle pour le moment. Créez-en un avec « Nouveau modèle ».</p>
+    </div>
+
+    <!-- Éditeur scindé -->
+    <div class="gn-split" v-if="editing">
+        <div class="card gn-split__left">
+            <div class="header"><h2>{{ form.id ? 'Modifier le modèle' : 'Nouveau modèle' }}</h2></div>
+            <div class="body">
+                <p class="gn-cmp-err" role="alert" v-if="err.message">{{ err.message }}</p>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'name'}"><label for="tpl-name">Nom du modèle</label><input id="tpl-name" type="text" maxlength="120" v-model.trim="form.name" placeholder="Ex. Newsletter hebdo"></div>
+                <div class="gn-field"><label for="tpl-kind">Style de la miniature</label>
+                    <select id="tpl-kind" v-model="form.kind"><option value="news">Actualités</option><option value="alert">Alerte</option><option value="welcome">Bienvenue</option></select>
+                </div>
+                <div class="gn-field"><label for="tpl-subject">Objet par défaut</label><input id="tpl-subject" type="text" maxlength="190" v-model.trim="form.subject"></div>
+                <div class="gn-field"><label for="tpl-pre">Pré-en-tête par défaut</label><input id="tpl-pre" type="text" maxlength="190" v-model.trim="form.preheader"></div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'body'}">
+                    <label for="tpl-body">Corps du message</label>
+                    <div class="gn-vars" role="group" aria-label="Insérer une variable">
+                        <button type="button" v-for="v in variables" v-bind:key="v[0]" v-bind:title="v[1]" v-on:click="insert_var(v[0])">{{ v[0] }}</button>
+                    </div>
+                    <textarea id="tpl-body" ref="body" rows="10" v-model="form.body"></textarea>
+                    <small>Une ligne vide sépare deux paragraphes. Le texte est mis en forme automatiquement avec la charte Ganho.</small>
+                </div>
+                <div class="gn-field-row">
+                    <div class="gn-field"><label for="tpl-cta">Texte du bouton (facultatif)</label><input id="tpl-cta" type="text" maxlength="60" v-model.trim="form.cta_label" placeholder="Ouvrir le forum"></div>
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'cta_url'}"><label for="tpl-url">Lien du bouton</label><input id="tpl-url" type="text" maxlength="255" v-model.trim="form.cta_url" placeholder="https://… ou lien du forum"></div>
+                </div>
+                <div class="gn-split__actions">
+                    <button type="button" class="btn btn-default" v-on:click="close_editor">Annuler</button>
+                    <button type="button" class="btn btn-primary" v-bind:disabled="busy" v-on:click="save">Enregistrer le modèle</button>
+                </div>
+            </div>
+        </div>
+        <div class="card gn-split__right">
+            <div class="header gn-split__bar"><h2>Aperçu en temps réel</h2>
+                <div class="gn-seg" role="group" aria-label="Taille d’écran"><button type="button" v-bind:class="{on: device === 'desktop'}" v-on:click="device = 'desktop'">Ordinateur · 600 px</button><button type="button" v-bind:class="{on: device === 'mobile'}" v-on:click="device = 'mobile'">Mobile · 320 px</button></div>
+            </div>
+            <div class="gn-pv"><iframe title="Aperçu du modèle" sandbox="" v-bind:srcdoc="html" v-bind:style="{width: device === 'mobile' ? '320px' : '600px'}"></iframe></div>
+            <small class="gn-pv__note">Aperçu avec des valeurs d’exemple (Kodjo, samedi 20 décembre, 15 h).</small>
+        </div>
+    </div>
+
+    <div class="gn-drawer gn-drawer--center" v-if="del.open" role="alertdialog" aria-modal="true" aria-labelledby="gn-tdel-t">
+        <div class="gn-drawer__backdrop" v-on:click="del.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-tdel-t">Supprimer ce modèle ?</h3>
+            <p>« {{ del.item && del.item.name }} » sera définitivement supprimé. Les diffusions déjà envoyées ne sont pas modifiées.</p>
+            <p class="gn-cmp-err" role="alert" v-if="err.message && del.open">{{ err.message }}</p>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="del.open = false; err.message = ''">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn gn-btn-danger" v-on:click="do_delete">Supprimer</button></div>
+        </div>
+    </div>
+
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<?php echo cl_template('cpanel/assets/email_templates/scripts/app_master_script'); ?>

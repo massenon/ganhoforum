@@ -1,0 +1,53 @@
+<div class="timeline-container gn-edu" data-app="educational">
+	<div class="timeline-header" data-el="tl-header">
+		<div class="timeline-header__topline"><div data-el="timeline-bs-notifs" class="timeline-bs-notifs"></div></div>
+		<div class="timeline-header__botline">
+			<div class="lp"><div class="nav-link-holder"><a href="<?php echo cl_link('contenus-educatifs'); ?>" data-spa="true">Contenus éducatifs</a></div></div>
+			<div class="cp"><a href="<?php echo cl_link('/'); ?>"><img src="{%config site_logo%}" alt="Logo"></a></div>
+		</div>
+	</div>
+
+	<div class="gn-edu__intro">
+		<h1>Comprendre pour mieux se protéger</h1>
+		<p>Des fiches claires sur les violences numériques : ce que c’est, comment les reconnaître, que faire et où trouver de l’aide. Rien de tout cela n’est de votre faute.</p>
+	</div>
+
+	<nav class="gn-edu__cats" aria-label="Filtrer par catégorie">
+		<a href="<?php echo cl_link('contenus-educatifs'); ?>" data-spa="true" class="gn-chip-link <?php if (empty($cl['edu_cat'])) { echo 'on'; } ?>">Toutes <span><?php echo count($cl["edu_all"]); ?></span></a>
+		<?php foreach ($cl["edu_categories"] as $ck => $cl_label):
+			$n = 0; foreach ($cl["edu_all"] as $it) { if ($it["category"] == $ck) { $n++; } }
+			if ($n == 0) { continue; } ?>
+			<a href="<?php echo cl_link('contenus-educatifs?cat=' . $ck); ?>" data-spa="true" class="gn-chip-link <?php if ($cl['edu_cat'] == $ck) { echo 'on'; } ?>"><?php echo cl_edu_h($cl_label); ?> <span><?php echo $n; ?></span></a>
+		<?php endforeach; ?>
+	</nav>
+
+	<?php if (not_empty($cl["edu_items"])): ?>
+		<ul class="gn-edu__grid">
+			<?php foreach ($cl["edu_items"] as $it): ?>
+				<li>
+					<article class="gn-edu-card">
+						<a class="gn-edu-card__link" href="<?php echo $it['url']; ?>" data-spa="true">
+							<span class="gn-edu-card__img gn-edu-card__img--<?php echo cl_edu_h($it['category']); ?>">
+								<?php if ($it["image_url"] !== ""): ?><img src="<?php echo cl_edu_h($it['image_url']); ?>" alt="" loading="lazy" decoding="async"><?php endif; ?>
+								<?php if ($it["pinned"]): ?><b class="gn-edu-card__pin">À la une</b><?php endif; ?>
+							</span>
+							<span class="gn-edu-card__body">
+								<span class="gn-edu-card__cat"><?php echo cl_edu_h($it["category_label"]); ?></span>
+								<span class="gn-edu-card__title"><?php echo cl_edu_h($it["title"]); ?></span>
+								<span class="gn-edu-card__sum"><?php echo cl_edu_h($it["summary"]); ?></span>
+								<span class="gn-edu-card__meta"><?php echo cl_edu_h($it["audience_label"]); ?> · <?php echo $it["minutes"]; ?> min de lecture</span>
+							</span>
+						</a>
+					</article>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	<?php else: ?>
+		<p class="gn-edu__empty">Aucune fiche dans cette catégorie pour le moment.</p>
+	<?php endif; ?>
+
+	<aside class="gn-edu__help">
+		<div><b>Besoin d’en parler ?</b><span>Vous pouvez créer une alerte : l’équipe GANXÔ vous écoute et vous oriente.</span></div>
+		<a class="btn btn-custom main-inline md" href="<?php echo cl_link('alert'); ?>" data-spa="true">Créer une alerte VBG</a>
+	</aside>
+</div>

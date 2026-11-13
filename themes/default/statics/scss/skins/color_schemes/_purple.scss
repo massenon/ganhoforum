@@ -1,0 +1,19 @@
+// @*************************************************************************@
+// @ Software author: Dr MASSENON Rhodes                                     @
+// @ Author_url : www.massenonrhodes.com                                     @
+// @ Author E-mail: rarhodes06@gmail.com                                     @
+// @*************************************************************************@
+// @ Ganho Forum                                                             @
+// @*************************************************************************@
+
+body[data-skin="purple"]{
+
+	// THEME PRIMARY COLORS
+
+	$cl-primary-color: #794bc4;
+	$cl-primary-link-color: #794bc4;
+
+	--cl-primary-color: #{$cl-primary-color};
+	--cl-primary-color-darken-5: #{darken($cl-primary-color, 5)};
+	--cl-primary-link-color: #{$cl-primary-link-color};
+}

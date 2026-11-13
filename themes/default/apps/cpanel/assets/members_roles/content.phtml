@@ -1,0 +1,111 @@
+<div class="cp-app-container gn-cmp gn-adm" data-app="members-roles" id="vue-adm-members" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>Annuaire et rôles</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Membres et rôles</a></li>
+            </ol>
+        </div>
+    </div>
+    <p class="gn-adm-help">Les rôles « modérateur », « vérifié » et « bénévole écoutant » sont des étiquettes gérées ici (seul « administrateur » donne accès à ce panneau). Les badges valorisent l’entraide. Une suspension réactive le compte automatiquement à son terme.</p>
+
+    <div class="card">
+        <div class="header gn-cmp-filters">
+            <label class="gn-cmp-search"><span class="gn-sr">Recherche</span><input type="search" v-model.trim="f.q" v-on:keyup.enter="reload(1)" placeholder="Pseudo, e-mail, prénom…"></label>
+            <label><span class="gn-sr">Statut</span><select v-model="f.status" v-on:change="reload(1)"><option value="">Tous les statuts</option><option value="active">Actif</option><option value="suspended">Suspendu</option><option value="banned">Banni</option></select></label>
+            <label><span class="gn-sr">Rôle</span><select v-model="f.role" v-on:change="reload(1)"><option value="">Tous les rôles</option><option value="admin">Administrateur·rice</option><option v-for="(l, k) in roles" v-bind:key="k" v-bind:value="k">{{ l }}</option></select></label>
+            <label><span class="gn-sr">Activité</span><select v-model="f.activity" v-on:change="reload(1)"><option value="">Toute activité</option><option value="active30">Actif ces 30 jours</option><option value="inactive90">Inactif depuis 90 jours</option></select></label>
+            <label><span class="gn-sr">Inscrit depuis</span><input type="date" v-model="f.from" v-on:change="reload(1)" title="Inscrit à partir du"></label>
+            <label><span class="gn-sr">Inscrit jusqu’au</span><input type="date" v-model="f.to" v-on:change="reload(1)" title="Inscrit jusqu’au"></label>
+            <button type="button" class="btn btn-primary" v-on:click="reload(1)">Filtrer</button>
+        </div>
+        <div class="body gn-cmp-tablewrap">
+            <p class="gn-adm-muted">{{ total }} membre(s)</p>
+            <table class="table gn-cmp-table">
+                <thead><tr><th>Membre</th><th>Inscrit le</th><th>Dernière activité</th><th>Statut</th><th>Rôles et badges</th><th class="gn-cmp-actions-h">Actions</th></tr></thead>
+                <tbody>
+                    <tr v-for="m in members" v-bind:key="m.id">
+                        <td><a v-bind:href="m.url" target="_blank" rel="noopener"><b>@{{ m.username }}</b></a><small class="gn-cmp-sub">{{ m.name }} {{ m.email }}</small></td>
+                        <td>{{ m.joined_fr }}</td>
+                        <td>{{ m.last_fr }}<small class="gn-cmp-sub">{{ m.posts }} publication(s)</small></td>
+                        <td><span class="gn-badge" v-bind:class="status_class(m.status)">{{ status_label(m.status) }}</span><small class="gn-cmp-sub" v-if="m.until_fr">jusqu’au {{ m.until_fr }}</small><small class="gn-cmp-sub" v-if="m.warnings">{{ m.warnings }} avertissement(s)</small></td>
+                        <td>
+                            <span class="gn-adm-chip gn-adm-chip--admin" v-if="m.is_admin">Administrateur·rice</span>
+                            <span class="gn-adm-chip" v-for="r in m.roles" v-bind:key="r">{{ roles[r] }}</span>
+                            <span class="gn-adm-chip gn-adm-chip--badge" v-for="b in m.badges" v-bind:key="b">★ {{ badges[b] }}</span>
+                        </td>
+                        <td class="gn-cmp-actions"><button type="button" class="btn btn-default" v-on:click="open(m)">Gérer</button></td>
+                    </tr>
+                    <tr v-if="!members.length"><td colspan="6" class="gn-cmp-empty"><p>Aucun membre ne correspond à ces filtres.</p></td></tr>
+                </tbody>
+            </table>
+            <div class="gn-adm-pager" v-if="pages > 1"><button type="button" class="btn btn-default" v-bind:disabled="page <= 1" v-on:click="reload(page - 1)">← Précédent</button><span>Page {{ page }} / {{ pages }}</span><button type="button" class="btn btn-default" v-bind:disabled="page >= pages" v-on:click="reload(page + 1)">Suivant →</button></div>
+        </div>
+    </div>
+
+    <div class="gn-drawer" v-if="sel" role="dialog" aria-modal="true" aria-labelledby="gn-m-t">
+        <div class="gn-drawer__backdrop" v-on:click="sel = null"></div>
+        <div class="gn-drawer__panel">
+            <header class="gn-drawer__head"><h3 id="gn-m-t">@{{ sel.username }}</h3><button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="sel = null">&times;</button></header>
+            <div class="gn-drawer__body">
+                <p class="gn-cmp-err" role="alert" v-if="err">{{ err }}</p>
+                <fieldset class="gn-radios"><legend>Rôles</legend>
+                    <label class="gn-radio" v-for="(l, k) in roles" v-bind:key="k" v-bind:class="{on: has_role(k)}"><input type="checkbox" v-bind:checked="has_role(k)" v-on:change="toggle_role(k, $event.target.checked)"><span class="gn-radio__t">{{ l }}</span><span class="gn-radio__n" v-if="k === 'verified'">Applique aussi la coche « vérifié » du profil</span></label>
+                </fieldset>
+                <fieldset class="gn-radios"><legend>Badges de reconnaissance</legend>
+                    <label class="gn-radio" v-for="(l, k) in badges" v-bind:key="k" v-bind:class="{on: has_badge(k)}"><input type="checkbox" v-bind:checked="has_badge(k)" v-on:change="toggle_badge(k, $event.target.checked)"><span class="gn-radio__t">★ {{ l }}</span></label>
+                </fieldset>
+                <div class="gn-recap" v-if="!sel.is_admin">
+                    <b>Sanctions</b>
+                    <div class="gn-field"><label for="m-reason">Motif</label><input id="m-reason" type="text" maxlength="300" v-model="reason"></div>
+                    <div class="gn-field"><label for="m-days">Durée de suspension</label><select id="m-days" v-model.number="days"><option v-bind:value="1">1 jour</option><option v-bind:value="7">7 jours</option><option v-bind:value="30">30 jours</option></select></div>
+                    <button type="button" class="btn btn-default" v-on:click="sanction('warn')">Avertir</button>
+                    <button type="button" class="btn btn-default" v-on:click="sanction('suspend')">Suspendre</button>
+                    <button type="button" class="btn gn-btn-danger" v-on:click="sanction('ban')">Bannir</button>
+                    <button type="button" class="btn btn-primary" v-if="sel.status !== 'active'" v-on:click="sanction('restore')">Réactiver le compte</button>
+                </div>
+                <p class="gn-adm-muted" v-else>Les comptes administrateurs ne peuvent pas être sanctionnés depuis cet écran.</p>
+            </div>
+        </div>
+    </div>
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<script>
+	"use strict";
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+		function call(a, d) { return $.ajax({url: API + a, type: 'POST', data: d || {}, dataType: 'json'}); }
+		SMC_CPanel.MEM = new Vue({
+			el: '#vue-adm-members',
+			data: {members: [], total: 0, page: 1, pages: 1, f: {q: '', status: '', role: '', activity: '', from: '', to: ''},
+				roles: <?php echo cl_minify_js(json($cl["adm_roles"], true)); ?>, badges: <?php echo cl_minify_js(json($cl["adm_badges"], true)); ?>,
+				sel: null, err: '', reason: '', days: 7, toast: ''},
+			created: function() { this.reload(1); },
+			methods: {
+				say: function(t) { var _this = this; this.toast = t; setTimeout(function() { _this.toast = ''; }, 3200); },
+				status_label: function(s) { return {active: 'Actif', suspended: 'Suspendu', banned: 'Banni', inactive: 'Inactif'}[s] || s; },
+				status_class: function(s) { return {active: 'gn-badge--sent', suspended: 'gn-badge--scheduled', banned: 'gn-badge--u-high', inactive: 'gn-badge--draft'}[s]; },
+				reload: function(p) {
+					var _this = this, d = $.extend({}, this.f, {page: p || 1});
+					call('adm_members', d).done(function(r) {
+						if (r.status === 200) { _this.members = r.members; _this.total = r.total; _this.page = r.page; _this.pages = r.pages; if (_this.sel) { _this.refresh_sel(); } }
+					});
+				},
+				refresh_sel: function() { var id = this.sel.id, f = null; this.members.forEach(function(m) { if (m.id === id) { f = m; } }); if (f) { this.sel = f; } },
+				open: function(m) { this.sel = m; this.err = ''; this.reason = ''; },
+				has_role: function(k) { return this.sel.roles.indexOf(k) !== -1; },
+				has_badge: function(k) { return this.sel.badges.indexOf(k) !== -1; },
+				toggle_role: function(k, on) { var _this = this; call('adm_mem_role', {user_id: this.sel.id, role: k, on: on ? 1 : 0}).done(function() { _this.reload(_this.page); _this.say('Rôle mis à jour.'); }); },
+				toggle_badge: function(k, on) { var _this = this; call('adm_mem_badge', {user_id: this.sel.id, badge: k, on: on ? 1 : 0}).done(function() { _this.reload(_this.page); _this.say('Badge mis à jour.'); }); },
+				sanction: function(t) {
+					var _this = this; this.err = '';
+					call('adm_mem_sanction', {user_id: this.sel.id, type: t, days: this.days, reason: this.reason}).done(function(d) {
+						if (d.status === 200) { _this.say('Action enregistrée.'); _this.reload(_this.page); } else { _this.err = d.message || 'Action impossible.'; }
+					});
+				}
+			}
+		});
+	});
+</script>

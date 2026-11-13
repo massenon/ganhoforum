@@ -1,0 +1,193 @@
+<script>
+	"use strict";
+
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+
+		function call(action, data) {
+			return $.ajax({url: API + action, type: 'POST', data: data || {}, dataType: 'json'});
+		}
+
+		function blank() {
+			return {id: 0, title: '', subject: '', preheader: '', template_id: 0, body: '', event_date: '', audience: 'all', mode: 'now', scheduled_at: ''};
+		}
+
+		SMC_CPanel.CMP = new Vue({
+			el: '#vue-cmp-app',
+			data: {
+				campaigns: <?php echo cl_minify_js(json($cl["cmp_campaigns"], true)); ?>,
+				templates: <?php echo cl_minify_js(json($cl["cmp_templates"], true)); ?>,
+				kpis: <?php echo cl_minify_js(json($cl["cmp_kpis"], true)); ?>,
+				audiences: <?php echo cl_minify_js(json($cl["cmp_audiences"], true)); ?>,
+				statuses: {draft: 'Brouillon', scheduled: 'Programmé', sending: 'En cours', sent: 'Envoyé'},
+				f: {q: '', status: '', audience: ''},
+				drawer: {open: false},
+				step: 1,
+				form: blank(),
+				counts: {},
+				err: {message: '', field: ''},
+				info: '',
+				busy: false,
+				sending: {active: false, sent: 0, failed: 0, total: 0, pct: 0},
+				pv: {open: false, html: '', device: 'desktop'},
+				del: {open: false, item: null},
+				toast: '',
+				body_ph: 'Laissez vide pour utiliser le texte du modèle. Variables : {{prenom}}, {{nom_utilisateur}}, {{lien_forum}}, {{date_evenement}}'
+			},
+			computed: {
+				filtered: function() {
+					var f = this.f, q = f.q.toLowerCase();
+					return this.campaigns.filter(function(c) {
+						return (!f.status || c.status === f.status) && (!f.audience || c.audience === f.audience) &&
+							(!q || (c.title + ' ' + c.subject).toLowerCase().indexOf(q) !== -1);
+					});
+				},
+				tpl_name: function() {
+					var id = this.form.template_id, n = '—';
+					this.templates.forEach(function(t) { if (t.id === id) { n = t.name; } });
+					return n;
+				},
+				submit_label: function() {
+					return this.form.mode === 'now' ? 'Envoyer maintenant' : (this.form.mode === 'later' ? 'Programmer l’envoi' : 'Enregistrer le brouillon');
+				}
+			},
+			created: function() {
+				var m = /[?&]use_template=(\d+)/.exec(location.search);
+				if (m) {
+					this.open_new();
+					this.form.template_id = parseInt(m[1], 10);
+					this.on_template();
+				}
+			},
+			methods: {
+				say: function(t) {
+					var _this = this;
+					this.toast = t;
+					setTimeout(function() { _this.toast = ''; }, 3500);
+				},
+				reset_msgs: function() { this.err = {message: '', field: ''}; this.info = ''; },
+				refresh: function() {
+					var _this = this;
+					return call('cmp_list').done(function(d) {
+						if (d.status === 200) { _this.campaigns = d.campaigns; _this.kpis = d.kpis; }
+					});
+				},
+				open_new: function() {
+					this.form = blank(); this.step = 1; this.reset_msgs(); this.drawer.open = true;
+				},
+				open_edit: function(c) {
+					if (c.status === 'sent' || c.status === 'sending') { return; }
+					this.form = {id: c.id, title: c.title, subject: c.subject, preheader: c.preheader, template_id: c.template_id, body: c.body || '', event_date: c.event_date,
+						audience: c.audience, mode: c.status === 'scheduled' ? 'later' : 'draft', scheduled_at: c.scheduled_input};
+					this.step = 1; this.reset_msgs(); this.drawer.open = true;
+				},
+				close_drawer: function() {
+					if (this.sending.active) { return; }
+					this.drawer.open = false;
+				},
+				on_template: function() {
+					var id = this.form.template_id, f = this.form;
+					this.templates.forEach(function(t) {
+						if (t.id === id) {
+							if (!f.subject) { f.subject = t.subject; }
+							if (!f.preheader) { f.preheader = t.preheader; }
+						}
+					});
+				},
+				next: function() {
+					this.reset_msgs();
+					var f = this.form;
+					if (this.step === 1) {
+						if (!f.title) { this.err = {message: 'Donnez un titre à la diffusion.', field: 'title'}; return; }
+						if (!f.subject) { this.err = {message: 'L’objet du message est obligatoire.', field: 'subject'}; return; }
+						if (!f.template_id) { this.err = {message: 'Choisissez un modèle.', field: 'template_id'}; return; }
+						this.load_counts();
+					}
+					this.step++;
+				},
+				load_counts: function() {
+					var _this = this;
+					Object.keys(this.audiences).forEach(function(k) {
+						call('cmp_count', {audience: k}).done(function(d) { if (d.status === 200) { _this.$set(_this.counts, k, d.count); } });
+					});
+				},
+				payload: function() {
+					var f = this.form;
+					return {id: f.id, title: f.title, subject: f.subject, preheader: f.preheader, template_id: f.template_id, body: f.body, event_date: f.event_date, audience: f.audience, mode: f.mode, scheduled_at: f.scheduled_at};
+				},
+				show_preview: function(html) { this.pv.html = html; this.pv.open = true; },
+				preview_form: function() {
+					var _this = this;
+					call('cmp_preview', this.payload()).done(function(d) {
+						if (d.status === 200) { _this.show_preview(d.html); } else { _this.err = {message: d.message || 'Aperçu impossible.', field: ''}; }
+					});
+				},
+				preview_row: function(c) {
+					var _this = this;
+					call('cmp_preview', {template_id: c.template_id, subject: c.subject, preheader: c.preheader, body: c.body || '', event_date: c.event_date}).done(function(d) {
+						if (d.status === 200) { _this.show_preview(d.html); } else { _this.say(d.message || 'Aperçu impossible.'); }
+					});
+				},
+				send_test: function() {
+					var _this = this;
+					this.reset_msgs(); this.busy = true;
+					call('cmp_test', this.payload()).done(function(d) {
+						if (d.status === 200) { _this.info = 'Test envoyé à ' + d.to + '.'; } else { _this.err = {message: d.message || 'Le test n’a pas pu être envoyé.', field: ''}; }
+					}).fail(function() { _this.err = {message: 'Erreur réseau.', field: ''}; }).always(function() { _this.busy = false; });
+				},
+				submit: function() {
+					var _this = this;
+					this.reset_msgs(); this.busy = true;
+					call('cmp_save', this.payload()).done(function(d) {
+						if (d.status !== 200) {
+							_this.busy = false;
+							_this.err = {message: d.message || 'Enregistrement impossible.', field: d.field || ''};
+							if (d.field === 'title' || d.field === 'subject' || d.field === 'template_id') { _this.step = 1; }
+							return;
+						}
+						_this.form.id = d.id;
+						if (_this.form.mode === 'now') { _this.run_send(d.id); return; }
+						_this.busy = false; _this.drawer.open = false;
+						_this.say(_this.form.mode === 'later' ? 'Diffusion programmée.' : 'Brouillon enregistré.');
+						_this.refresh();
+					}).fail(function() { _this.busy = false; _this.err = {message: 'Erreur réseau.', field: ''}; });
+				},
+				run_send: function(id) {
+					var _this = this;
+					this.sending = {active: true, sent: 0, failed: 0, total: 0, pct: 0};
+					(function loop() {
+						call('cmp_send', {id: id}).done(function(d) {
+							if (d.status !== 200) {
+								_this.sending.active = false; _this.busy = false;
+								_this.err = {message: d.message || 'L’envoi a échoué.', field: ''};
+								_this.refresh();
+								return;
+							}
+							_this.sending.sent = d.sent; _this.sending.failed = d.failed; _this.sending.total = d.total;
+							_this.sending.pct = d.total ? Math.round(100 * (d.sent + d.failed) / d.total) : 100;
+							if (d.done) {
+								_this.sending.active = false; _this.busy = false; _this.drawer.open = false;
+								_this.say('Diffusion envoyée à ' + d.sent + ' personne(s)' + (d.failed ? ' (' + d.failed + ' échec(s))' : '') + '.');
+								_this.refresh();
+							} else { loop(); }
+						}).fail(function() { _this.sending.active = false; _this.busy = false; _this.err = {message: 'Erreur réseau pendant l’envoi. Relancez : il reprendra où il s’est arrêté.', field: ''}; _this.refresh(); });
+					})();
+				},
+				duplicate: function(c) {
+					var _this = this;
+					call('cmp_duplicate', {id: c.id}).done(function(d) {
+						if (d.status === 200) { _this.say('Diffusion dupliquée en brouillon.'); _this.refresh(); }
+					});
+				},
+				ask_delete: function(c) { this.del = {open: true, item: c}; },
+				do_delete: function() {
+					var _this = this, c = this.del.item;
+					call('cmp_delete', {id: c.id}).done(function(d) {
+						_this.del.open = false;
+						if (d.status === 200) { _this.say('Diffusion supprimée.'); _this.refresh(); }
+					});
+				}
+			}
+		});
+	});
+</script>

@@ -1,0 +1,43 @@
+<div class="acp-main-left-sidebar" data-app="left-sidebar">
+    <div class="admin-info">
+        <div class="user-info">
+            <div class="avatar">
+                <img src="<?php echo($me['avatar']); ?>" alt="Avatar">
+            </div>
+            <div class="uname">
+                <h5>
+                    <?php echo($me['name']); ?>
+                </h5>
+                <div>
+                    administrator
+                </div>
+            </div>
+            <div class="menu-ctrl">
+                <button class="btn" onclick="SMC_CPanel.menu_toggle();">
+                    <?php echo cl_ikon("close"); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+    <?php require_once(cl_full_path("themes/default/apps/cpanel/assets/main/menu_groups.php")); $cp_active = cl_cp_active_group($cl["cp_section"]); ?>
+    <ul class="menu-list">
+        <li class="menu-list-item">
+            <a href="<?php echo cl_link('home'); ?>" class="menu-list-item-link">
+                <span class="icon"><?php echo cl_ikon("home"); ?></span>
+                <span class="text">Accueil du site</span>
+            </a>
+        </li>
+        <?php foreach (cl_cp_groups() as $cp_g): ?>
+            <li class="menu-list-item <?php if ($cp_active && $cp_active['id'] == $cp_g['id']) {echo('active');} ?>">
+                <a href="<?php echo cl_link('admin_panel/' . $cp_g['tabs'][0][1]); ?>" class="menu-list-item-link">
+                    <span class="icon"><?php echo cl_ikon($cp_g['icon']); ?></span>
+                    <span class="text"><?php echo($cp_g['title']); ?></span>
+                    <?php if (count($cp_g['tabs']) > 1): ?><span class="count"><?php echo count($cp_g['tabs']); ?></span><?php endif; ?>
+                </a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <div class="sb-footer">
+        &copy; {%config name%} - <?php echo date('Y'); ?>.  <b>(v<?php echo $cl["config"]["version"]; ?>)</b>
+    </div>
+</div>

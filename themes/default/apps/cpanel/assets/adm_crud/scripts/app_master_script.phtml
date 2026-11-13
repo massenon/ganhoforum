@@ -1,0 +1,61 @@
+<script>
+	"use strict";
+
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+		var BOOT = <?php echo cl_minify_js(json($cl["adm_boot"], true)); ?>;
+
+		function call(action, data) {
+			data = data || {}; data.entity = BOOT.entity;
+			return $.ajax({url: API + action, type: 'POST', data: data, dataType: 'json'});
+		}
+		function blank() {
+			var f = {id: 0};
+			BOOT.fields.forEach(function(x) {
+				f[x.key] = x.type === 'select' ? Object.keys(x.options)[0] : (x.type === 'number' ? 0 : '');
+			});
+			return f;
+		}
+
+		SMC_CPanel.ADM = new Vue({
+			el: '#vue-adm-crud',
+			data: {cfg: BOOT, rows: BOOT.rows, q: '', drawer: false, form: blank(), err: {message: '', field: ''}, busy: false, del: {open: false, item: null}, toast: ''},
+			computed: {
+				filtered: function() {
+					var q = this.q.toLowerCase();
+					if (!q) { return this.rows; }
+					return this.rows.filter(function(r) { return JSON.stringify(r).toLowerCase().indexOf(q) !== -1; });
+				}
+			},
+			methods: {
+				say: function(t) { var _this = this; this.toast = t; setTimeout(function() { _this.toast = ''; }, 3200); },
+				open_new: function() { this.form = blank(); this.err = {message: '', field: ''}; this.drawer = true; },
+				open_edit: function(r) {
+					var f = blank();
+					BOOT.fields.forEach(function(x) {
+						if (x.type === 'datetime') { f[x.key] = r[x.key + '_input'] || ''; }
+						else if (x.type === 'select') { f[x.key] = String(r[x.key]); }
+						else { f[x.key] = r[x.key]; }
+					});
+					f.id = r.id; f.subject = r.subject; f.message = r.message;
+					this.form = f; this.err = {message: '', field: ''}; this.drawer = true;
+				},
+				save: function() {
+					var _this = this; this.busy = true; this.err = {message: '', field: ''};
+					call('adm_save', this.form).done(function(d) {
+						_this.busy = false;
+						if (d.status === 200) { _this.rows = d.rows; _this.drawer = false; _this.say('Enregistré.'); }
+						else { _this.err = {message: d.message || 'Enregistrement impossible.', field: d.field || ''}; }
+					}).fail(function() { _this.busy = false; _this.err = {message: 'Erreur réseau.', field: ''}; });
+				},
+				do_delete: function() {
+					var _this = this, r = this.del.item;
+					call('adm_delete', {id: r.id}).done(function(d) {
+						_this.del.open = false;
+						if (d.status === 200) { _this.rows = d.rows; _this.say('Supprimé.'); }
+					});
+				}
+			}
+		});
+	});
+</script>

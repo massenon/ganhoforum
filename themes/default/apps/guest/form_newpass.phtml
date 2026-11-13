@@ -1,0 +1,33 @@
+<form class="gx-form" id="cl-savepass-vue-app" v-on:submit="submit_form($event)" novalidate>
+	<h2 class="gx-card__title">Nouveau mot de passe</h2>
+	<p class="gx-card__sub">Choisissez un mot de passe de 6 à 20 caractères. Mélangez majuscules, minuscules, chiffres et symboles pour le rendre plus solide.</p>
+
+	<div class="gx-errsum" v-cloak v-if="show_summary" ref="summary" tabindex="-1" aria-labelledby="newpass-errsum-title">
+		<p class="gx-errsum__title" id="newpass-errsum-title" v-text="errors.length > 1 ? 'Veuillez corriger ' + errors.length + ' erreurs' : 'Veuillez corriger une erreur'">Veuillez corriger l'erreur</p>
+		<ul>
+			<li v-for="err in errors"><a v-bind:href="'#' + err.id" v-on:click.prevent="focus_field(err.id)">{{ err.msg }}</a></li>
+		</ul>
+	</div>
+
+	<div class="gx-field">
+		<label for="newpass-password">Nouveau mot de passe</label>
+		<div class="gx-pass">
+			<input id="newpass-password" placeholder="Nouveau mot de passe (6 à 20 caractères)" v-model.trim.lazy="$v.password.$model" v-bind:type="password1_display" name="password" class="gx-input" autocomplete="new-password" aria-required="true" v-bind:aria-invalid="err_password ? 'true' : 'false'" v-bind:aria-describedby="err_password ? 'newpass-password-err' : null">
+			<button type="button" class="gx-eye" v-on:click="password1_display_toggle" v-bind:aria-pressed="password1_display == 'text' ? 'true' : 'false'" aria-controls="newpass-password" v-text="password1_display == 'password' ? 'Afficher' : 'Masquer'">Afficher</button>
+		</div>
+		<p class="gx-err" id="newpass-password-err" v-cloak v-if="err_password" role="alert">{{ err_password }}</p>
+	</div>
+
+	<div class="gx-field">
+		<label for="newpass-conf">Répéter le mot de passe</label>
+		<div class="gx-pass">
+			<input id="newpass-conf" placeholder="Retapez le nouveau mot de passe" v-model.trim="$v.password2.$model" v-bind:type="password2_display" name="conf_pass" class="gx-input" autocomplete="new-password" aria-required="true" v-bind:aria-invalid="err_password2 ? 'true' : 'false'" v-bind:aria-describedby="err_password2 ? 'newpass-conf-err' : null">
+			<button type="button" class="gx-eye" v-on:click="password2_display_toggle" v-bind:aria-pressed="password2_display == 'text' ? 'true' : 'false'" aria-controls="newpass-conf" v-text="password2_display == 'password' ? 'Afficher' : 'Masquer'">Afficher</button>
+		</div>
+		<p class="gx-err" id="newpass-conf-err" v-cloak v-if="err_password2" role="alert">{{ err_password2 }}</p>
+	</div>
+
+	<button type="submit" class="gn-btn gn-btn--primary gn-btn--lg gx-submit" v-bind:disabled="submitting" v-bind:aria-busy="submitting ? 'true' : 'false'" v-text="submitting ? 'Veuillez patienter…' : 'Enregistrer le mot de passe'">Enregistrer le mot de passe</button>
+	<input type="hidden" class="d-none" value="<?php echo fetch_or_get($cl['csrf_token'],'none'); ?>" name="hash">
+	<input type="hidden" class="d-none" value="<?php echo fetch_or_get($cl['em_code'],'none'); ?>" name="em_code">
+</form>

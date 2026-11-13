@@ -1,0 +1,95 @@
+<div class="cp-app-container" data-app="dashboard">
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>
+                Tableau de bord
+            </h2>
+            <ol class="breadcrumb">
+                <li>
+                    <a href="<?php echo cl_link('admin_panel'); ?>">
+                        Panneau de contrôle
+                    </a>
+                </li>
+                <li class="active">
+                    <a href="javascript:void(0);">
+                        Tableau de bord
+                    </a>
+                </li> 
+            </ol>
+        </div>
+    </div>
+
+    <?php $K = $cl["adm_kpis"]; $gn_pct = function ($v) { return $v === null ? "—" : $v . " %"; }; ?>
+    <section class="gn-adm-kpis" aria-label="Indicateurs clés">
+        <a class="gn-adm-kpi" href="<?php echo cl_link('admin_panel/members_roles'); ?>"><span class="gn-adm-kpi__t">Membres</span><span class="gn-adm-kpi__n"><?php echo (int) $K["users"]; ?></span><span class="gn-adm-kpi__s">+<?php echo (int) $K["new_today"]; ?> aujourd’hui · rétention <?php echo (int) $K["retention"]; ?> % (<?php echo (int) $K["active30"]; ?> actifs sur 30 jours)</span></a>
+        <div class="gn-adm-kpi"><span class="gn-adm-kpi__t">Activité (7 jours)</span><span class="gn-adm-kpi__n"><?php echo (int) $K["pubs7"]; ?></span><span class="gn-adm-kpi__s">nouvelles publications · <?php echo (int) $K["replies7"]; ?> réponses · <?php echo (int) $K["messages7"]; ?> messages privés</span></div>
+        <a class="gn-adm-kpi <?php if ($K["pending"] > 0) { echo 'gn-adm-kpi--alert'; } ?>" href="<?php echo cl_link('admin_panel/moderation_queue'); ?>"><span class="gn-adm-kpi__t">Alertes de modération</span><span class="gn-adm-kpi__n"><?php echo (int) $K["pending"]; ?></span><span class="gn-adm-kpi__s">en attente (<?php echo (int) $K["pending_posts"]; ?> publications, <?php echo (int) $K["pending_profiles"]; ?> profils) · priorité haute</span></a>
+        <div class="gn-adm-kpi"><span class="gn-adm-kpi__t">Taux de traitement</span><span class="gn-adm-kpi__n"><?php echo $gn_pct($K["handled_rate"]); ?></span><span class="gn-adm-kpi__s">des <?php echo (int) $K["reports_total"]; ?> signalements sont traités · <?php echo $gn_pct($K["answered_rate"]); ?> des publications des 30 derniers jours ont reçu une réponse</span></div>
+    </section>
+
+    <div class="row">
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+            <div class="info-box bg-pink hover-expand-effect">
+                <div class="icon">
+                    <?php echo cl_ikon('people'); ?>
+                </div>
+                <div class="content">
+                    <div class="text">
+                        Users
+                    </div>
+                    <div class="number count-to" data-from="0" data-to="<?php echo($cl['total_users']); ?>" data-speed="15" data-fresh-interval="20"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+            <div class="info-box bg-blue hover-expand-effect">
+                <div class="icon">
+                    <?php echo cl_ikon('feed'); ?>
+                </div>
+                <div class="content">
+                    <div class="text">Posts</div>
+                    <div class="number count-to" data-from="0" data-to="<?php echo($cl['total_posts']); ?>" data-speed="1000" data-fresh-interval="20"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+            <div class="info-box bg-light-green hover-expand-effect">
+                <div class="icon">
+                    <?php echo cl_ikon('image'); ?>
+                </div>
+                <div class="content">
+                    <div class="text">Images</div>
+                    <div class="number count-to" data-from="0" data-to="<?php echo($cl['total_images']); ?>" data-speed="1000" data-fresh-interval="20"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+            <div class="info-box bg-orange hover-expand-effect">
+                <div class="icon">
+                    <?php echo cl_ikon('video'); ?>
+                </div>
+                <div class="content">
+                    <div class="text">Videos</div>
+                    <div class="number count-to" data-from="0" data-to="<?php echo($cl['total_videos']); ?>" data-speed="1000" data-fresh-interval="20"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <div class="card">
+                <div class="header">
+                    <h2>
+                        Annual statistics of new users and published media content
+                    </h2>
+                </div>
+                <div class="body">
+                    <canvas id="annual_media_content_statistics" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php echo cl_template('cpanel/assets/dashboard/scripts/app_master_script'); ?>

@@ -1,0 +1,66 @@
+<form class="gx-form" id="cl-signup-vue-app" v-on:submit="submit_form($event)" novalidate>
+	<h2 class="gx-card__title">Rejoignez Ganho</h2>
+	<p class="gx-card__sub">Quelques informations suffisent. Aucune question sur votre orientation ou votre identité n'est obligatoire.</p>
+
+	<div class="gx-errsum" v-cloak v-if="show_summary" ref="summary" tabindex="-1" aria-labelledby="signup-errsum-title">
+		<p class="gx-errsum__title" id="signup-errsum-title" v-text="errors.length > 1 ? 'Veuillez corriger ' + errors.length + ' erreurs' : 'Veuillez corriger une erreur'">Veuillez corriger l'erreur</p>
+		<ul>
+			<li v-for="err in errors"><a v-bind:href="'#' + err.id" v-on:click.prevent="focus_field(err.id)">{{ err.msg }}</a></li>
+		</ul>
+	</div>
+
+	<div class="gx-grid2">
+	<div class="gx-field">
+		<label for="signup-uname">Nom d'utilisateur</label>
+		<input id="signup-uname" placeholder="Choisissez un pseudonyme" name="uname" v-model.trim.lazy="$v.uname.$model" type="text" class="gx-input" autocomplete="username" autocapitalize="none" spellcheck="false" aria-required="true" v-bind:aria-invalid="err_uname ? 'true' : 'false'">
+		<p class="gx-err" id="signup-uname-err" v-cloak v-if="err_uname" role="alert">{{ err_uname }}</p>
+	</div>
+
+	<div class="gx-field">
+		<label for="signup-email">Adresse e-mail</label>
+		<input id="signup-email" placeholder="vous@exemple.org" name="email" v-model.trim.lazy="$v.email.$model" type="email" class="gx-input" autocomplete="email" spellcheck="false" aria-required="true" v-bind:aria-invalid="err_email ? 'true' : 'false'" v-bind:aria-describedby="err_email ? 'signup-email-err' : null">
+		<p class="gx-err" id="signup-email-err" v-cloak v-if="err_email" role="alert">{{ err_email }}</p>
+	</div>
+
+	</div>
+	<div class="gx-grid2">
+	<div class="gx-field">
+		<label for="signup-password">Mot de passe</label>
+		<div class="gx-pass">
+			<input id="signup-password" placeholder="6 à 20 caractères" name="password" v-model.trim.lazy="$v.password.$model" v-bind:type="password1_display" class="gx-input" autocomplete="new-password" aria-required="true" aria-describedby="signup-password-hint" v-bind:aria-invalid="err_password ? 'true' : 'false'">
+			<button type="button" class="gx-eye" v-on:click="password1_display_toggle" v-bind:aria-pressed="password1_display == 'text' ? 'true' : 'false'" aria-controls="signup-password" v-text="password1_display == 'password' ? 'Afficher' : 'Masquer'">Afficher</button>
+		</div>
+		<p class="gx-hint" id="signup-password-hint">De 6 à 20 caractères.</p>
+		<p class="gx-err" id="signup-password-err" v-cloak v-if="err_password" role="alert">{{ err_password }}</p>
+	</div>
+
+	<div class="gx-field">
+		<label for="signup-conf">Confirmer le mot de passe</label>
+		<div class="gx-pass">
+			<input id="signup-conf" placeholder="Retapez le mot de passe" name="conf_pass" v-model.trim="$v.password2.$model" v-bind:type="password2_display" class="gx-input" autocomplete="new-password" aria-required="true" v-bind:aria-invalid="err_password2 ? 'true' : 'false'" v-bind:aria-describedby="err_password2 ? 'signup-conf-err' : null">
+			<button type="button" class="gx-eye" v-on:click="password2_display_toggle" v-bind:aria-pressed="password2_display == 'text' ? 'true' : 'false'" aria-controls="signup-conf" v-text="password2_display == 'password' ? 'Afficher' : 'Masquer'">Afficher</button>
+		</div>
+		<p class="gx-err" id="signup-conf-err" v-cloak v-if="err_password2" role="alert">{{ err_password2 }}</p>
+	</div>
+
+	</div>
+	<div class="gx-field gx-field--check">
+		<div class="gx-check">
+			<input v-model="tos_agree" type="checkbox" id="tos-agree" aria-required="true" v-bind:aria-invalid="err_tos ? 'true' : 'false'">
+			<label for="tos-agree">J'accepte les <a href="<?php echo cl_link('terms_of_use'); ?>" target="_blank" rel="noopener">conditions d'utilisation</a> et la <a href="<?php echo cl_link('privacy_policy'); ?>" target="_blank" rel="noopener">politique de confidentialité</a> de Ganho.</label>
+		</div>
+		<p class="gx-err" id="signup-tos-err" v-cloak v-if="err_tos" role="alert">{{ err_tos }}</p>
+	</div>
+
+	<?php if ($cl["config"]["google_recaptcha"] == "on"): ?>
+		<div class="gx-field">
+			<div class="g-recaptcha" data-sitekey="<?php echo($cl["config"]["google_recap_key1"]); ?>"></div>
+			<p class="gx-err" v-cloak v-if="grecaptcha_error" role="alert">Veuillez cocher reCAPTCHA pour poursuivre l'inscription.</p>
+		</div>
+	<?php endif; ?>
+
+	<button type="submit" class="gn-btn gn-btn--primary gn-btn--lg gx-submit" v-bind:disabled="submitting || done" v-bind:aria-busy="submitting ? 'true' : 'false'" v-text="done ? 'Compte créé, redirection…' : (submitting ? 'Veuillez patienter…' : 'Créer mon compte')">Créer mon compte</button>
+
+	<p class="gx-switch">Vous avez déjà un compte ? <a href="<?php echo cl_link('guest?auth=login'); ?>" data-gx-tab="login">Se connecter</a></p>
+	<input type="hidden" class="d-none" value="<?php echo fetch_or_get($cl['csrf_token'], 'none'); ?>" name="hash">
+</form>

@@ -1,0 +1,111 @@
+<div class="cp-app-container gn-cmp gn-edu-admin" data-app="edu-content" id="vue-edu-app" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>Contenus éducatifs</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">Contenus éducatifs</a></li>
+            </ol>
+        </div>
+        <div class="rp"><button type="button" class="btn btn-primary" v-on:click="open_new">+ Nouvelle fiche</button></div>
+    </div>
+
+    <div class="gn-cmp-kpis" role="list">
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ items.length }}</span><span class="gn-cmp-kpi__l">Fiches au total</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ count_status('published') }}</span><span class="gn-cmp-kpi__l">Publiées</span></div>
+        <div class="gn-cmp-kpi" role="listitem"><span class="gn-cmp-kpi__n">{{ count_status('draft') }}</span><span class="gn-cmp-kpi__l">Brouillons</span></div>
+    </div>
+
+    <div class="card">
+        <div class="header gn-cmp-filters">
+            <label class="gn-cmp-search"><span class="gn-sr">Rechercher</span><input type="search" v-model.trim="f.q" placeholder="Rechercher une fiche…"></label>
+            <label><span class="gn-sr">Catégorie</span>
+                <select v-model="f.category"><option value="">Toutes les catégories</option><option v-for="(label, key) in categories" v-bind:value="key">{{ label }}</option></select>
+            </label>
+            <label><span class="gn-sr">Statut</span>
+                <select v-model="f.status"><option value="">Tous les statuts</option><option value="published">Publié</option><option value="draft">Brouillon</option></select>
+            </label>
+        </div>
+        <div class="body gn-cmp-tablewrap">
+            <table class="table gn-cmp-table">
+                <thead><tr><th>Titre</th><th>Catégorie</th><th>Public</th><th>Statut</th><th>Mise à jour</th><th class="gn-cmp-actions-h">Actions</th></tr></thead>
+                <tbody v-if="filtered.length">
+                    <tr v-for="it in filtered" v-bind:key="it.id">
+                        <td><b>{{ it.title }}</b><span class="gn-badge gn-badge--sending gn-pin" v-if="it.pinned">À la une</span><small class="gn-cmp-sub">{{ it.summary }}</small></td>
+                        <td>{{ it.category_label }}</td>
+                        <td>{{ it.audience_label }}</td>
+                        <td><span class="gn-badge" v-bind:class="it.status === 'published' ? 'gn-badge--sent' : 'gn-badge--draft'">{{ it.status === 'published' ? 'Publié' : 'Brouillon' }}</span></td>
+                        <td>{{ it.date_fr }}</td>
+                        <td class="gn-cmp-actions">
+                            <a class="gn-icon-btn" title="Voir sur le forum" aria-label="Voir sur le forum" v-bind:href="it.url" target="_blank" rel="noopener" v-bind:class="{'is-off': it.status !== 'published'}"><?php echo cl_ikon('eye'); ?></a>
+                            <button type="button" class="gn-icon-btn" title="Modifier" aria-label="Modifier" v-on:click="open_edit(it)"><?php echo cl_ikon('edit'); ?></button>
+                            <button type="button" class="gn-icon-btn" title="Dupliquer" aria-label="Dupliquer" v-on:click="duplicate(it)"><?php echo cl_ikon('copy'); ?></button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--txt" v-on:click="toggle(it)">{{ it.status === 'published' ? 'Dépublier' : 'Publier' }}</button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--danger" title="Supprimer" aria-label="Supprimer" v-on:click="del = {open: true, item: it}"><?php echo cl_ikon('delete'); ?></button>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody v-else><tr><td colspan="6" class="gn-cmp-empty"><p v-if="items.length === 0">Aucune fiche pour le moment.</p><p v-else>Aucune fiche ne correspond à ces filtres.</p></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Éditeur -->
+    <div class="gn-drawer" v-if="drawer" role="dialog" aria-modal="true" aria-labelledby="gn-edu-title">
+        <div class="gn-drawer__backdrop" v-on:click="close_drawer"></div>
+        <div class="gn-drawer__panel gn-drawer__panel--lg">
+            <header class="gn-drawer__head"><h3 id="gn-edu-title">{{ form.id ? 'Modifier la fiche' : 'Nouvelle fiche' }}</h3><button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="close_drawer">&times;</button></header>
+            <div class="gn-drawer__body">
+                <p class="gn-cmp-err" role="alert" v-if="err.message">{{ err.message }}</p>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'title'}"><label for="edu-title">Titre</label><input id="edu-title" type="text" maxlength="190" v-model.trim="form.title"></div>
+                <div class="gn-field-row">
+                    <div class="gn-field" v-bind:class="{'has-error': err.field === 'category'}"><label for="edu-cat">Catégorie</label><select id="edu-cat" v-model="form.category"><option value="" disabled>Choisir…</option><option v-for="(label, key) in categories" v-bind:value="key">{{ label }}</option></select></div>
+                    <div class="gn-field"><label for="edu-aud">Public concerné</label><select id="edu-aud" v-model="form.audience"><option v-for="(label, key) in audiences" v-bind:value="key">{{ label }}</option></select></div>
+                </div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'summary'}"><label for="edu-sum">Résumé (affiché dans la liste)</label><textarea id="edu-sum" rows="2" maxlength="400" v-model="form.summary"></textarea><small>{{ form.summary.length }} / 400</small></div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'body'}">
+                    <label for="edu-body">Contenu</label>
+                    <div class="gn-vars" role="group" aria-label="Mise en forme">
+                        <button type="button" v-on:click="fmt('## ', '', 'Intertitre')">Intertitre</button>
+                        <button type="button" v-on:click="fmt('**', '**', 'gras')">Gras</button>
+                        <button type="button" v-on:click="fmt('- ', '', 'élément de liste')">Liste</button>
+                        <button type="button" v-on:click="fmt('1. ', '', 'étape')">Liste numérotée</button>
+                        <button type="button" v-on:click="fmt('> ', '', 'citation')">Citation</button>
+                        <button type="button" v-on:click="fmt('!! ', '', 'point important à retenir')">À retenir</button>
+                    </div>
+                    <textarea id="edu-body" ref="body" rows="14" v-model="form.body"></textarea>
+                    <small>Une ligne vide sépare deux paragraphes. <code v-pre>## Titre</code>, <code v-pre>- liste</code>, <code v-pre>1. étape</code>, <code v-pre>&gt; citation</code>, <code v-pre>!! à retenir</code>, <code v-pre>**gras**</code>.</small>
+                </div>
+                <div class="gn-field" v-bind:class="{'has-error': err.field === 'image'}">
+                    <label for="edu-img">Image (facultative)</label>
+                    <div class="gn-edu-imgrow">
+                        <input id="edu-img" type="text" v-model.trim="form.image" placeholder="upload/edu/… ou https://…">
+                        <label class="btn btn-default gn-edu-upload">Envoyer une image<input type="file" accept="image/jpeg,image/png,image/webp" v-on:change="upload($event)" class="gn-sr"></label>
+                    </div>
+                    <small>JPG, PNG ou WebP, 3 Mo maximum.</small>
+                </div>
+                <div class="gn-field-row">
+                    <div class="gn-field"><label for="edu-status">Statut</label><select id="edu-status" v-model="form.status"><option value="draft">Brouillon</option><option value="published">Publié</option></select></div>
+                    <div class="gn-field"><label class="gn-edu-check"><input type="checkbox" v-model="form.pinned"> Mettre à la une (affiché en premier)</label></div>
+                </div>
+            </div>
+            <footer class="gn-drawer__foot">
+                <button type="button" class="btn btn-default" v-on:click="close_drawer">Annuler</button>
+                <span class="gn-drawer__spacer"></span>
+                <button type="button" class="btn btn-primary" v-bind:disabled="busy" v-on:click="save">{{ form.status === 'published' ? 'Enregistrer et publier' : 'Enregistrer le brouillon' }}</button>
+            </footer>
+        </div>
+    </div>
+
+    <div class="gn-drawer gn-drawer--center" v-if="del.open" role="alertdialog" aria-modal="true" aria-labelledby="gn-edu-del">
+        <div class="gn-drawer__backdrop" v-on:click="del.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-edu-del">Supprimer cette fiche ?</h3>
+            <p>« {{ del.item && del.item.title }} » sera définitivement supprimée. Cette action est irréversible.</p>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="del.open = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn gn-btn-danger" v-on:click="do_delete">Supprimer</button></div>
+        </div>
+    </div>
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<?php echo cl_template('cpanel/assets/edu_content/scripts/app_master_script'); ?>

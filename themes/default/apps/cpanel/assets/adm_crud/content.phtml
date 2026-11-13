@@ -1,0 +1,83 @@
+<?php
+$gn_def = $cl["adm_def"];
+$gn_fields = array();
+foreach ($gn_def["fields"] as $f) {
+    $gn_fields[] = array("key" => $f[0], "label" => $f[1], "type" => $f[2], "options" => (isset($f[3]) && is_array($f[3])) ? $f[3] : null, "max" => (isset($f[3]) && is_int($f[3])) ? $f[3] : 0, "required" => !empty($f[4]));
+}
+$gn_cols = array();
+foreach ($gn_def["columns"] as $c) { $gn_cols[] = array("key" => $c[0], "label" => $c[1], "kind" => isset($c[2]) ? $c[2] : "text"); }
+$cl["adm_boot"] = array("entity" => $cl["adm_entity"], "title" => $gn_def["title"], "singular" => $gn_def["singular"], "help" => $gn_def["help"], "readonly" => !empty($gn_def["readonly"]), "no_create" => !empty($gn_def["no_create"]), "fields" => $gn_fields, "columns" => $gn_cols, "rows" => $cl["adm_rows"]);
+?>
+<div class="cp-app-container gn-cmp gn-adm" data-app="adm-crud" id="vue-adm-crud" v-cloak>
+    <div class="current-page-name">
+        <div class="lp">
+            <h2>{{ cfg.title }}</h2>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo cl_link('admin_panel'); ?>">Panneau de contrôle</a></li>
+                <li class="active"><a href="javascript:void(0);">{{ cfg.title }}</a></li>
+            </ol>
+        </div>
+        <div class="rp" v-if="!cfg.readonly && !cfg.no_create">
+            <button type="button" class="btn btn-primary" v-on:click="open_new">+ Ajouter {{ cfg.singular }}</button>
+        </div>
+    </div>
+
+    <p class="gn-adm-help">{{ cfg.help }}</p>
+
+    <div class="card">
+        <div class="header gn-cmp-filters">
+            <label class="gn-cmp-search"><span class="gn-sr">Rechercher</span><input type="search" v-model.trim="q" placeholder="Rechercher…"></label>
+        </div>
+        <div class="body gn-cmp-tablewrap">
+            <table class="table gn-cmp-table">
+                <thead><tr><th v-for="c in cfg.columns" v-bind:key="c.key">{{ c.label }}</th><th class="gn-cmp-actions-h" v-if="!cfg.readonly">Actions</th></tr></thead>
+                <tbody v-if="filtered.length">
+                    <tr v-for="r in filtered" v-bind:key="r.id">
+                        <td v-for="c in cfg.columns" v-bind:key="c.key">
+                            <span v-if="c.kind === 'enum'" class="gn-badge" v-bind:class="'gn-badge--' + r[c.key]">{{ r[c.key + '_label'] }}</span>
+                            <span v-else-if="c.kind === 'date'">{{ r[c.key + '_fr'] || r.time_fr || '—' }}</span>
+                            <span v-else class="gn-adm-clip">{{ r[c.key] }}</span>
+                        </td>
+                        <td class="gn-cmp-actions" v-if="!cfg.readonly">
+                            <button type="button" class="gn-icon-btn" title="Modifier" aria-label="Modifier" v-on:click="open_edit(r)"><?php echo cl_ikon('edit'); ?></button>
+                            <button type="button" class="gn-icon-btn gn-icon-btn--danger" title="Supprimer" aria-label="Supprimer" v-on:click="del = {open: true, item: r}"><?php echo cl_ikon('delete'); ?></button>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody v-else><tr><td v-bind:colspan="cfg.columns.length + 1" class="gn-cmp-empty"><p>Rien à afficher pour le moment.</p></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="gn-drawer" v-if="drawer" role="dialog" aria-modal="true" aria-labelledby="gn-adm-dt">
+        <div class="gn-drawer__backdrop" v-on:click="drawer = false"></div>
+        <div class="gn-drawer__panel">
+            <header class="gn-drawer__head"><h3 id="gn-adm-dt">{{ form.id ? 'Modifier' : 'Ajouter' }} {{ cfg.singular }}</h3><button type="button" class="gn-icon-btn" aria-label="Fermer" v-on:click="drawer = false">&times;</button></header>
+            <div class="gn-drawer__body">
+                <p class="gn-cmp-err" role="alert" v-if="err.message">{{ err.message }}</p>
+                <div class="gn-field" v-for="f in cfg.fields" v-bind:key="f.key" v-bind:class="{'has-error': err.field === f.key}">
+                    <label v-bind:for="'f-' + f.key">{{ f.label }}<span v-if="f.required"> *</span></label>
+                    <input v-if="f.type === 'text'" v-bind:id="'f-' + f.key" type="text" v-bind:maxlength="f.max || 255" v-model.trim="form[f.key]">
+                    <input v-else-if="f.type === 'number'" v-bind:id="'f-' + f.key" type="number" v-model.number="form[f.key]">
+                    <input v-else-if="f.type === 'datetime'" v-bind:id="'f-' + f.key" type="datetime-local" v-model="form[f.key]">
+                    <textarea v-else-if="f.type === 'textarea'" v-bind:id="'f-' + f.key" rows="4" v-bind:maxlength="f.max || 1000" v-model="form[f.key]"></textarea>
+                    <select v-else-if="f.type === 'select'" v-bind:id="'f-' + f.key" v-model="form[f.key]"><option v-for="(label, val) in f.options" v-bind:key="val" v-bind:value="val">{{ label }}</option></select>
+                </div>
+                <div class="gn-adm-ctx" v-if="form.id && cfg.entity === 'suggestions'"><b>{{ form.subject }}</b><p>{{ form.message }}</p></div>
+            </div>
+            <footer class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="drawer = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn btn-primary" v-bind:disabled="busy" v-on:click="save">Enregistrer</button></footer>
+        </div>
+    </div>
+
+    <div class="gn-drawer gn-drawer--center" v-if="del.open" role="alertdialog" aria-modal="true" aria-labelledby="gn-adm-del">
+        <div class="gn-drawer__backdrop" v-on:click="del.open = false"></div>
+        <div class="gn-modal gn-modal--sm">
+            <h3 id="gn-adm-del">Supprimer cet élément ?</h3>
+            <p>La suppression est définitive.</p>
+            <div class="gn-drawer__foot"><button type="button" class="btn btn-default" v-on:click="del.open = false">Annuler</button><span class="gn-drawer__spacer"></span><button type="button" class="btn gn-btn-danger" v-on:click="do_delete">Supprimer</button></div>
+        </div>
+    </div>
+    <div class="gn-toast" role="status" v-if="toast">{{ toast }}</div>
+</div>
+
+<?php echo cl_template('cpanel/assets/adm_crud/scripts/app_master_script'); ?>

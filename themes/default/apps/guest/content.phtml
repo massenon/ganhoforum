@@ -1,0 +1,187 @@
+<?php
+# @*************************************************************************@
+# @ Ganho Forum : page unique connexion / inscription (arc-en-ciel)          @
+# @*************************************************************************@
+
+$gx_type    = $cl["auth_type"];
+$gx_signup  = ($cl['config']['user_signup'] == "on" || not_empty($cl["invite_code_status"]));
+$gx_tabs    = in_array($gx_type, array("login", "signup")) || ($gx_type == "reset_pass" && empty($cl['em_code']));
+$gx_active  = ($gx_type == "signup") ? "signup" : "login";
+$gx_img     = cl_link("themes/default/statics/ganho/img");
+
+$gx_icons = array(
+	"users"  => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+	"heart"  => '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+	"spark"  => '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/>',
+	"chat"   => '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>',
+	"badge"  => '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>',
+	"shield" => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12h6M12 9v6"/>',
+	"down"   => '<path d="M12 3v12m0 0-4-4m4 4 4-4M4 20h16"/>'
+);
+$gx_benefits = array(
+	array("users",  "Rencontrer de nouvelles personnes"),
+	array("heart",  "Nouer de vraies amitiés"),
+	array("spark",  "Sensibilisation sur les VBG et la dépression"),
+	array("shield", "Communauté LGBTQ inclusive")
+);
+$gx_svg = function ($name) use ($gx_icons) {
+	return '<svg class="gx-ico" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $gx_icons[$name] . '</svg>';
+};
+?>
+<a class="gn-skip" href="#main-content">Aller au formulaire</a>
+
+<script>document.documentElement.classList.add('gx-pre');</script>
+<div class="gx-shell" data-app="guest" data-auth="<?php echo $gx_type; ?>">
+	<div class="gx-hero">
+	<header class="gx-brand">
+		<a class="gx-logo" href="<?php echo cl_link('/'); ?>" title="Forum Ganho, retour à l'accueil">
+			<img src="<?php echo $gx_img; ?>/logo-lettres-blanches-416w.png" srcset="<?php echo $gx_img; ?>/logo-lettres-blanches-416w.png 416w, <?php echo $gx_img; ?>/logo-lettres-blanches-832w.png 832w" sizes="(min-width: 1024px) 208px, 160px" alt="Logo GANXÔ" title="Logo GANXÔ" width="416" height="119" fetchpriority="high" decoding="async">
+		</a>
+		<h1 class="gx-h1">Rejoignez <span class="gn-gradient-text">nous&nbsp;!</span></h1>
+	</header>
+	<aside class="gx-story" aria-label="À propos de Ganho">
+		<p class="gx-motto"><strong>Rejoignez la communauté LGBT+</strong> pour échanger, partager et obtenir des conseils, soutien et réponses entre membres.</p>
+
+		<section class="gx-block" aria-labelledby="gx-belong">
+			<h2 id="gx-belong" class="gx-h2">Vous avez votre place ici</h2>
+			<p class="gx-belong">Lesbiennes, gays, bi, trans, queer, intersexes, asexuel·les, non-binaires, pansexuel·les, en questionnement : vous avez votre place ici.</p>
+		</section>
+
+		<div class="gx-row">
+			<div class="gx-faces" aria-hidden="true">
+				<img src="<?php echo $gx_img; ?>/face-1.webp" alt="" width="84" height="104" loading="lazy" decoding="async">
+				<img src="<?php echo $gx_img; ?>/face-2.webp" alt="" width="84" height="104" loading="lazy" decoding="async">
+				<img src="<?php echo $gx_img; ?>/face-3.webp" alt="" width="84" height="104" loading="lazy" decoding="async">
+			</div>
+		<section class="gx-block" aria-labelledby="gx-benefits">
+			<h2 id="gx-benefits" class="gx-h2">Ce que vous trouverez ici</h2>
+			<ul class="gx-benefits">
+				<?php foreach ($gx_benefits as $b): ?>
+					<li><?php echo $gx_svg($b[0]); ?><span><?php echo $b[1]; ?></span></li>
+				<?php endforeach; ?>
+			</ul>
+		</section>
+		</div>
+
+
+		<div class="gx-apps">
+			<h2 class="gx-h2 gx-h2--sm" id="gx-apps">L'application mobile</h2>
+			<ul class="gx-stores" aria-labelledby="gx-apps">
+				<li><span class="gx-store"><img src="<?php echo $gx_img; ?>/google-play.svg" alt="Google Play : bientôt disponible" title="Google Play : bientôt disponible" width="160" height="50" loading="lazy" decoding="async"><small>Bientôt disponible</small></span></li>
+				<li><span class="gx-store"><img src="<?php echo $gx_img; ?>/app-store.svg" alt="App Store : bientôt disponible" title="App Store : bientôt disponible" width="160" height="50" loading="lazy" decoding="async"><small>Bientôt disponible</small></span></li>
+			</ul>
+		</div>
+	</aside>
+	<div class="gx-stripes" aria-hidden="true"></div>
+	</div>
+	<main id="main-content" class="gx-main" tabindex="-1">
+		<div class="gx-card">
+			<div class="gx-card__rule" aria-hidden="true"></div>
+
+			<?php if ($gx_tabs): ?>
+				<div class="gx-tabs" role="tablist" aria-label="Accès au forum">
+					<a role="tab" id="tab-login" class="gx-tab" href="<?php echo cl_link('guest?auth=login'); ?>" aria-controls="panel-login" aria-selected="<?php echo ($gx_active == 'login') ? 'true' : 'false'; ?>" tabindex="<?php echo ($gx_active == 'login') ? '0' : '-1'; ?>">Connexion</a>
+					<a role="tab" id="tab-signup" class="gx-tab" href="<?php echo cl_link('guest?auth=signup'); ?>" aria-controls="panel-signup" aria-selected="<?php echo ($gx_active == 'signup') ? 'true' : 'false'; ?>" tabindex="<?php echo ($gx_active == 'signup') ? '0' : '-1'; ?>">Inscription</a>
+				</div>
+
+				<div role="tabpanel" id="panel-login" class="gx-panel" aria-labelledby="tab-login" <?php if ($gx_active != "login") echo "hidden"; ?>>
+					<?php if ($gx_type == "reset_pass"): ?>
+						<p class="gx-notice gx-notice--warn" role="status">Ce lien de réinitialisation est invalide ou a expiré. Connectez-vous, ou demandez un nouveau lien avec « Mot de passe oublié ».</p>
+					<?php endif; ?>
+					<?php echo cl_template('guest/form_login'); ?>
+				</div>
+
+				<div role="tabpanel" id="panel-signup" class="gx-panel" aria-labelledby="tab-signup" <?php if ($gx_active != "signup") echo "hidden"; ?>>
+					<?php if ($gx_signup): ?>
+						<?php if (not_empty($cl["invite_code"]) && empty($cl["invite_code_status"])): ?>
+							<p class="gx-notice gx-notice--warn" role="status">Le lien d'invitation utilisé est invalide ou a expiré.</p>
+						<?php endif; ?>
+						<?php echo cl_template('guest/form_signup'); ?>
+					<?php else: ?>
+						<?php echo cl_template('guest/form_off'); ?>
+					<?php endif; ?>
+				</div>
+			<?php elseif ($gx_type == "forgot_pass"): ?>
+				<div class="gx-panel">
+					<?php echo cl_template('guest/form_forgot'); ?>
+				</div>
+			<?php else: ?>
+				<div class="gx-panel">
+					<?php echo cl_template('guest/form_newpass'); ?>
+				</div>
+			<?php endif; ?>
+			<p class="gx-help">Besoin d’aide sans compte ? <a href="<?php echo cl_link('alert'); ?>">Créer une alerte VBG</a></p>
+		</div>
+	</main>
+
+	<footer class="gx-legal">
+		<nav aria-label="Informations légales et aide">
+			<ul>
+				<li><a href="<?php echo cl_link('terms_of_use'); ?>">Conditions d'utilisation</a></li>
+				<li><a href="<?php echo cl_link('privacy_policy'); ?>">Politique de confidentialité</a></li>
+				<li><a href="<?php echo cl_link('cookies_policy'); ?>">Cookies</a></li>
+				<li><a href="<?php echo cl_link('about_us'); ?>">À propos</a></li>
+				<li><a href="<?php echo cl_link('faqs'); ?>">Centre d'aide</a></li>
+			</ul>
+		</nav>
+		<p>&copy; <?php echo date("Y"); ?> GANXÔ. Tous droits réservés.</p>
+	</footer>
+</div>
+
+<script id="gx-fit-script">
+(function () {
+	var shell = document.querySelector('.gx-shell'), root = document.documentElement, z = 1, raf = 0;
+	if (!shell) { root.classList.remove('gx-pre'); return; }
+	function fit() {
+		raf = 0;
+		if (window.innerWidth < 768) { shell.style.zoom = ''; z = 1; root.classList.remove('gx-fit', 'gx-pre'); return; }
+		var h = shell.getBoundingClientRect().height / z;
+		var nz = Math.max(0.55, Math.min(1.3, (window.innerHeight - 14) / h, window.innerWidth / 1256));
+		if (Math.abs(nz - z) > 0.002 || !root.classList.contains('gx-fit')) { z = nz; shell.style.zoom = nz; }
+		root.classList.add('gx-fit');
+		root.classList.remove('gx-pre');
+	}
+	function sched() { if (!raf) { raf = requestAnimationFrame(fit); } }
+	window.addEventListener('resize', sched);
+	if (window.MutationObserver) { new MutationObserver(sched).observe(shell, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class']}); }
+	if (document.fonts && document.fonts.ready) { document.fonts.ready.then(sched); }
+	fit();
+	setTimeout(function () { root.classList.remove('gx-pre'); }, 1200);
+
+	/* Onglets Connexion / Inscription : bascule sans rechargement (l'adresse change quand même) */
+	var pl = document.getElementById('panel-login'), ps = document.getElementById('panel-signup');
+	var tl = document.getElementById('tab-login'), ts = document.getElementById('tab-signup');
+	function show(which, push) {
+		if (!pl || !ps || !tl || !ts) { return false; }
+		var su = which === 'signup';
+		pl.hidden = su; ps.hidden = !su;
+		tl.setAttribute('aria-selected', su ? 'false' : 'true'); ts.setAttribute('aria-selected', su ? 'true' : 'false');
+		tl.tabIndex = su ? -1 : 0; ts.tabIndex = su ? 0 : -1;
+		document.title = (su ? 'Créer un compte' : 'Connexion') + ' | Forum Ganho';
+		if (push) { history.pushState({gx: which}, '', su ? ts.href : tl.href); }
+		sched();
+		return true;
+	}
+	[tl, ts].forEach(function (tab) {
+		if (!tab) { return; }
+		tab.addEventListener('click', function (e) {
+			if (!pl || !ps || e.metaKey || e.ctrlKey || e.shiftKey) { return; }
+			e.preventDefault();
+			show(tab === ts ? 'signup' : 'login', true);
+		});
+	});
+	window.addEventListener('popstate', function () { show(/auth=signup/.test(location.search) ? 'signup' : 'login', false); });
+})();
+</script>
+<?php
+$gx_v = function ($f) { return cl_link("themes/default/statics/" . $f . "?v=" . @filemtime(cl_full_path("themes/default/statics/" . $f))); };
+?>
+<script src="<?php echo $gx_v('js/libs/jquery-3.5.1.min.js'); ?>"></script>
+<script src="<?php echo $gx_v('js/libs/vuejs/vue-v2.6.11.min.js'); ?>"></script>
+<script src="<?php echo $gx_v('js/libs/vuejs/vue-plugins/validators.min.js'); ?>"></script>
+<script src="<?php echo $gx_v('js/libs/vuejs/vue-plugins/vuelidate.min.js'); ?>"></script>
+<script src="<?php echo $gx_v('js/libs/jquery-plugins/jquery.form-v4.2.2.min.js'); ?>"></script>
+<script src="<?php echo $gx_v('js/master.script.js'); ?>"></script>
+<?php echo cl_template('guest/scripts'); ?>
+
+

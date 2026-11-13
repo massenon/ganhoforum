@@ -1,0 +1,84 @@
+<script>
+	"use strict";
+
+	$(document).ready(function($) {
+		var API = '<?php echo cl_link("native_api/cpanel/"); ?>'.replace(/\/?$/, '/');
+		var CAMP = '<?php echo cl_link("admin_panel/campaigns"); ?>';
+
+		function call(action, data) {
+			return $.ajax({url: API + action, type: 'POST', data: data || {}, dataType: 'json'});
+		}
+		function blank() {
+			return {id: 0, name: '', kind: 'news', subject: '', preheader: '', body: '', cta_label: '', cta_url: ''};
+		}
+
+		SMC_CPanel.TPL = new Vue({
+			el: '#vue-tpl-app',
+			data: {
+				templates: <?php echo cl_minify_js(json($cl["cmp_templates"], true)); ?>,
+				variables: <?php echo cl_minify_js(json($cl["cmp_variables"], true)); ?>,
+				editing: false,
+				form: blank(),
+				err: {message: '', field: ''},
+				busy: false,
+				html: '',
+				device: 'desktop',
+				del: {open: false, item: null},
+				toast: '',
+				timer: null
+			},
+			watch: {
+				form: {deep: true, handler: function() { this.schedule_preview(); }}
+			},
+			methods: {
+				say: function(t) {
+					var _this = this;
+					this.toast = t;
+					setTimeout(function() { _this.toast = ''; }, 3500);
+				},
+				use_url: function(t) { return CAMP + '?use_template=' + t.id; },
+				open_new: function() { this.form = blank(); this.err = {message: '', field: ''}; this.editing = true; this.preview(); },
+				open_edit: function(t) {
+					this.form = {id: t.id, name: t.name, kind: t.kind, subject: t.subject, preheader: t.preheader, body: t.body, cta_label: t.cta_label, cta_url: t.cta_url};
+					this.err = {message: '', field: ''}; this.editing = true; this.preview();
+				},
+				close_editor: function() { this.editing = false; },
+				schedule_preview: function() {
+					var _this = this;
+					if (!this.editing) { return; }
+					clearTimeout(this.timer);
+					this.timer = setTimeout(function() { _this.preview(); }, 300);
+				},
+				preview: function() {
+					var _this = this, f = this.form;
+					call('cmp_tpl_preview', {subject: f.subject, preheader: f.preheader, body: f.body, cta_label: f.cta_label, cta_url: f.cta_url}).done(function(d) {
+						if (d.status === 200) { _this.html = d.html; }
+					});
+				},
+				insert_var: function(v) {
+					var ta = this.$refs.body, f = this.form, s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+					f.body = f.body.slice(0, s) + v + f.body.slice(e);
+					var _this = this;
+					this.$nextTick(function() { ta.focus(); ta.selectionStart = ta.selectionEnd = s + v.length; });
+				},
+				save: function() {
+					var _this = this, f = this.form;
+					this.err = {message: '', field: ''}; this.busy = true;
+					call('cmp_tpl_save', {id: f.id, name: f.name, kind: f.kind, subject: f.subject, preheader: f.preheader, body: f.body, cta_label: f.cta_label, cta_url: f.cta_url}).done(function(d) {
+						_this.busy = false;
+						if (d.status === 200) { _this.templates = d.templates; _this.editing = false; _this.say('Modèle enregistré.'); }
+						else { _this.err = {message: d.message || 'Enregistrement impossible.', field: d.field || ''}; }
+					}).fail(function() { _this.busy = false; _this.err = {message: 'Erreur réseau.', field: ''}; });
+				},
+				do_delete: function() {
+					var _this = this, t = this.del.item;
+					this.err = {message: '', field: ''};
+					call('cmp_tpl_delete', {id: t.id}).done(function(d) {
+						if (d.status === 200) { _this.templates = d.templates; _this.del.open = false; _this.say('Modèle supprimé.'); }
+						else { _this.err = {message: d.message || 'Suppression impossible.', field: ''}; }
+					});
+				}
+			}
+		});
+	});
+</script>

@@ -1,0 +1,91 @@
+<?php /* Invitation discrète à installer le forum comme application (PWA). Aucun effet si déjà installée ou refusée (14 jours). */
+$gn_pwa_icon = cl_link('themes/default/statics/ganho/img/icone-appli-192.png'); ?>
+<style>
+.gn-pwa{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:99980;width:min(340px,calc(100vw - 32px));display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;padding:14px 14px 18px;border-radius:20px;background:#0B0B14;color:#fff;box-shadow:0 12px 32px rgba(23,19,43,.28);overflow:hidden;font-family:Arial,"Liberation Sans",Roboto,sans-serif;transform:translateY(12px);opacity:0;transition:transform .35s ease,opacity .35s ease}
+.gn-pwa.is-in{transform:none;opacity:1}
+.gn-pwa[hidden]{display:none}
+.gn-pwa::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#5B2BB8,#2B33C9,#0A66E8,#0F8B6D,#3F9A1A,#FFBE05,#F66100,#E8381A)}
+.gn-pwa__ic{width:44px;height:44px;border-radius:12px;display:block}
+.gn-pwa__t{margin:0;font:800 .875rem/1.25 Montserrat,system-ui,sans-serif;color:#fff}
+.gn-pwa__d{margin:2px 0 0;font-size:.78rem;line-height:1.4;color:#B9B4D0}
+.gn-pwa__x{align-self:start;width:44px;height:44px;margin:-8px -8px 0 0;border:0;border-radius:50%;background:transparent;color:#B9B4D0;font-size:1.4rem;line-height:1;cursor:pointer}
+.gn-pwa__x:hover{color:#fff}
+.gn-pwa__row{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gn-pwa__go{min-height:44px;padding:0 20px;border:0;border-radius:999px;background:#fff;color:#0B0B14;font:700 .85rem Montserrat,system-ui,sans-serif;cursor:pointer}
+.gn-pwa__go[hidden]{display:none}
+.gn-pwa__later{min-height:44px;padding:0 12px;border:0;background:transparent;color:#B9B4D0;font:700 .8rem Montserrat,system-ui,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:.2em}
+.gn-pwa__how{grid-column:1/-1;margin:0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.08);font-size:.78rem;line-height:1.5;color:#fff}
+.gn-pwa__how[hidden]{display:none}
+.gn-pwa :focus-visible{outline:3px solid #8FA2FF;outline-offset:2px}
+@media (max-width:760px){.gn-pwa{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 74px)}.gn-auth-body .gn-pwa,.cl-app-guest .gn-pwa{bottom:max(16px,env(safe-area-inset-bottom))}}
+@media (prefers-reduced-motion:reduce){.gn-pwa{transition:none}}
+@media print{.gn-pwa{display:none}}
+</style>
+<aside class="gn-pwa" id="gn-pwa" hidden aria-label="Installer le forum Ganho">
+    <img class="gn-pwa__ic" src="<?php echo $gn_pwa_icon; ?>" alt="" width="44" height="44" decoding="async">
+    <div>
+        <p class="gn-pwa__t">Installer le forum Ganho</p>
+        <p class="gn-pwa__d">Un accès direct depuis votre écran d’accueil, plus rapide.</p>
+    </div>
+    <button type="button" class="gn-pwa__x" data-gn-pwa-close aria-label="Fermer">&times;</button>
+    <div class="gn-pwa__row">
+        <button type="button" class="gn-pwa__go" data-gn-pwa-go hidden>Installer</button>
+        <button type="button" class="gn-pwa__later" data-gn-pwa-close>Plus tard</button>
+    </div>
+    <p class="gn-pwa__how" data-gn-pwa-how hidden>Sur iPhone et iPad : touchez <strong>Partager</strong> dans Safari, puis <strong>Sur l’écran d’accueil</strong>.</p>
+</aside>
+<script>
+(function () {
+    'use strict';
+    var KEY = 'gn_forum_pwa_dismissed', WAIT = 14 * 864e5, DELAY = 25000;
+
+    /* Service worker : nécessaire à l'installation ; n'intercepte que les fichiers de la charte et le mode hors ligne. */
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname.slice(-9) === 'localhost' || location.hostname === '127.0.0.1')) {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+    }
+
+    var box = document.getElementById('gn-pwa');
+    if (!box) { return; }
+    function get() { try { return +localStorage.getItem(KEY) || 0; } catch (e) { return 0; } }
+    function set() { try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} }
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    if (standalone || Date.now() - get() < WAIT) { return; }
+
+    var ua = navigator.userAgent || '';
+    var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var deferred = null, timer = null, shown = false;
+    var go = box.querySelector('[data-gn-pwa-go]');
+    var how = box.querySelector('[data-gn-pwa-how]');
+
+    function busy() {
+        var c = document.querySelector('.gn-cookie');
+        if (c && !c.hidden && getComputedStyle(c).display !== 'none') { return true; }   /* bandeau cookies encore ouvert */
+        var a = document.activeElement;
+        if (a && /^(input|textarea|select)$/i.test(a.tagName)) { return true; }          /* l'utilisateur est en train d'écrire */
+        if (document.querySelector('.modal.show')) { return true; }                       /* une fenêtre est ouverte */
+        return false;
+    }
+    function show() {
+        if (shown) { return; }
+        clearTimeout(timer);
+        timer = setTimeout(function tick() {
+            if (document.visibilityState !== 'visible' || busy()) { timer = setTimeout(tick, 4000); return; }
+            shown = true; box.hidden = false;
+            requestAnimationFrame(function () { box.classList.add('is-in'); });
+        }, DELAY);
+    }
+    function hide(remember) { box.classList.remove('is-in'); setTimeout(function () { box.hidden = true; }, 300); if (remember) { set(); } }
+
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; go.hidden = false; how.hidden = true; show(); });
+    window.addEventListener('appinstalled', function () { hide(true); deferred = null; });
+    if (isIOS) { go.hidden = true; how.hidden = false; show(); }
+
+    go.addEventListener('click', function () {
+        if (!deferred) { return; }
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; hide(true); });
+    });
+    box.querySelectorAll('[data-gn-pwa-close]').forEach(function (b) { b.addEventListener('click', function () { hide(true); }); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !box.hidden) { hide(true); } });
+})();
+</script>

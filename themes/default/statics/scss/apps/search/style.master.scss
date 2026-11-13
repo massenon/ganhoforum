@@ -1,0 +1,25 @@
+// @*************************************************************************@
+// @ Software author: Dr MASSENON Rhodes                                     @
+// @ Author_url : www.massenonrhodes.com                                     @
+// @ Author E-mail: rarhodes06@gmail.com                                     @
+// @*************************************************************************@
+// @ Ganho Forum                                                             @
+// @*************************************************************************@
+
+body.cl-app-search{
+	&[data-page-tab="htags"]{
+		div.right-sb-container{
+			div.sidebar-content_hashtags{
+				display: none;
+			}
+		}
+	}
+
+	&[data-page-tab="people"]{
+		div.right-sb-container{
+			div.sidebar-content_users{
+				display: none;
+			}
+		}
+	}
+}

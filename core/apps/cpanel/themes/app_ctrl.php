@@ -1,0 +1,24 @@
+<?php 
+# @*************************************************************************@
+# @ Software author: Dr MASSENON Rhodes                                     @
+# @ Author_url : www.massenonrhodes.com                                     @
+# @ Author E-mail: rarhodes06@gmail.com                                     @
+# @*************************************************************************@
+# @ Ganho Forum                                                             @
+# @*************************************************************************@
+
+function cl_admin_get_themes() {
+	$theme_dirs = glob(cl_full_path("themes/*"), GLOB_ONLYDIR);
+	$theme_list = array();
+
+	if (is_array($theme_dirs)) {
+		foreach ($theme_dirs as $dir_path) {
+			$theme_info = file_get_contents(cl_strf("%s/info.json", $dir_path));
+			$theme_info = json($theme_info);
+
+			array_push($theme_list, $theme_info);
+		}
+	}
+
+    return $theme_list;
+}
