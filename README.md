@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/social-preview.png" alt="Forum GANXÔ : un espace sûr pour échanger, contenus éducatifs, bandes dessinées et alerte VBG en chat" width="100%"></p>
+<p align="center"><img src="docs/social-preview.png" alt="Forum GANXÔ : le logo, le slogan et deux captures du forum sur ordinateur (contenus éducatifs) et sur téléphone (bandes dessinées)" width="100%"></p>
 
 # GANXÔ · Forum
 
