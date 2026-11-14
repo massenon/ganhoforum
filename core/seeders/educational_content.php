@@ -338,6 +338,20 @@ $img_alt = array(
 		"Amina tient son téléphone dont l’écran affiche un symbole d’interdiction et respire profondément, les yeux fermés.",
 		"Amina et son amie Esther sont assises côte à côte sur un canapé ; Esther passe un bras autour de ses épaules, un ordinateur affiche un bouclier.",
 	),
+	"qui-regarde-par-dessus-mon-epaule-surveillance" => array(
+		"Lina, dans son salon à la tombée de la nuit, tient son téléphone d’un air surpris et inquiet ; à droite flottent un grand œil et une épingle de localisation.",
+		"Lina, assise dans sa chambre, regarde son téléphone qui chauffe, avec une batterie presque vide et un triangle d’avertissement ; une loupe discrète est visible derrière elle.",
+		"Lina et son amie aux cheveux courts teints en turquoise discutent à voix basse à la table d’un café ; entre elles, un autre téléphone affiche un cadenas vert.",
+		"Lina et son amie, côte à côte sur un canapé, regardent un téléphone ; un grand écran illustré montre des réglages désactivés, une position barrée et un cadenas.",
+		"Lina sourit avec soulagement devant un grand bouclier vert orné d’un cœur ; un carnet avec un plan en étapes est posé sur le bureau.",
+	),
+	"le-faux-profil-arnaque-sentimentale" => array(
+		"Yao, flatté, regarde son téléphone ; à droite flotte la carte d’un profil séduisant entourée de petits cœurs.",
+		"Yao, allongé sur son lit avec son téléphone, rêveur ; des cœurs et des bulles de messages en jaillissent à toute vitesse.",
+		"Yao, inquiet, regarde son téléphone ; une bulle orange d’urgence laisse échapper des pièces et un billet, avec une horloge.",
+		"Yao, la main sur le menton, doute devant son ordinateur ; une grande loupe examine deux photos identiques et un point d’interrogation flotte.",
+		"Yao, soulagé, parle avec un proche qui lui pose la main sur l’épaule ; un téléphone affiche un profil bloqué et un petit bouclier vert flotte entre eux.",
+	),
 );
 
 
