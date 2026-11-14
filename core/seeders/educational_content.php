@@ -11,7 +11,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
 $root = dirname(__DIR__, 2);
 chdir($root);
-$_SERVER["HTTP_HOST"] = isset($_SERVER["HTTP_HOST"]) ? $_SERVER["HTTP_HOST"] : "forum.ganho.localhost";
+$_SERVER["HTTP_HOST"] = isset($_SERVER["HTTP_HOST"]) ? $_SERVER["HTTP_HOST"] : "forum.ganho.app";
 require_once("core/web_req_init.php");
 
 $host = (string) parse_url($site_url, PHP_URL_HOST);

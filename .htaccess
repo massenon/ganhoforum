@@ -77,6 +77,11 @@ RewriteRule ^oauth/twitter(\/|)$ index.php?app=oauth&provider=twitter [QSA]
 RewriteRule ^oauth/google(\/|)$ index.php?app=oauth&provider=google [QSA]
 RewriteRule ^oauth/facebook(\/|)$ index.php?app=oauth&provider=facebook [QSA]
 
+# API mobile v1 (jeton Bearer) : https://forum.ganho.app/api/mobile/v1/...
+# L'en-tête Authorization doit atteindre PHP (certains hébergeurs mutualisés le suppriment).
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule ^api/mobile/v1(?:/(.*))?$ mobile_v1.php?route=$1 [QSA,L]
+
 RewriteRule ^native_api/(\w{3,32})/(\w{3,32})$ api.php?api=native&app=$1&action=$2 [QSA]
 RewriteRule ^mobile_api/(\w{3,32})$ api.php?api=mobile&app=$1 [QSA]
 

@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GANXÔ Forum — simulateur mobile</title>
+<meta name="description" content="Maquette interactive de l'application mobile du forum GANXÔ, fidèle au forum web en version mobile. Contenu fictif, aucune donnée réelle.">
+<meta name="theme-color" content="#0B0B14">
+<link rel="icon" href="data:,">
+<style>
+@font-face{font-family:"Montserrat";font-style:normal;font-weight:100 900;font-display:swap;src:url("assets/Montserrat-latin-normal.woff2") format("woff2")}
+:root{
+  --gn-violet:#5B2BB8;--gn-indigo:#2B33C9;--gn-blue:#0A66E8;--gn-teal:#0F8B6D;--gn-green:#3F9A1A;--gn-yellow:#FFBE05;--gn-orange:#F66100;--gn-red:#E8381A;
+  --gn-ink:#0B0B14;--gn-sos:#C8200E;
+  --gn-spectrum:linear-gradient(90deg,#5B2BB8,#2B33C9,#0A66E8,#0F8B6D,#3F9A1A,#FFBE05,#F66100,#E8381A);
+  --gn-font-head:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --cl-bg:#fff;--cl-bg2:#F8F1FF;--cl-bd:#E6DFF0;--cl-bd2:#D8CDEB;--cl-tx:#17132B;--cl-tx2:#55506B;--cl-ph:#6B6683;--cl-in:#F8F1FF;
+  --cl-pri:#2B33C9;--cl-pri-d:#2229A8;--cl-danger:#C8200E;--cl-sh:rgba(23,19,43,.08) 0 2px 8px 0;--cl-sh2:rgba(23,19,43,.12) 0 12px 32px 0;
+  --cl-chip:#E6E9FF;--cl-active-bg:#0B0B14;--cl-active-tx:#fff;
+}
+html[data-bg=dark]{
+  --cl-bg:#171428;--cl-bg2:#0B0B14;--cl-bd:#2B2745;--cl-bd2:#3A3560;--cl-tx:#F2EFFA;--cl-tx2:#B9B4D0;--cl-ph:#8B86A8;--cl-in:#0F0D1E;
+  --cl-pri:#8FA2FF;--cl-pri-d:#AEBBFF;--cl-danger:#FF6B5C;--cl-sh:none;--cl-sh2:none;--cl-chip:#2A2347;--cl-active-bg:#8FA2FF;--cl-active-tx:#0B0B14;
+}
+*,*::before,*::after{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:Arial,"Liberation Sans",Roboto,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:var(--cl-tx);background:#1d1a2e;display:grid;place-items:center;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,button,.hd{font-family:var(--gn-font-head)}
+h1,h2,h3,h4{margin:0;line-height:1.25}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--cl-pri)}
+:focus-visible{outline:3px solid var(--cl-pri);outline-offset:2px;border-radius:6px}
+.onb :focus-visible,.splash :focus-visible,.gnal__h :focus-visible{outline-color:#fff}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
+svg{display:block}
+
+/* ---------- cadre ---------- */
+.phone{position:relative;width:390px;height:844px;max-height:calc(100vh - 24px);border-radius:46px;background:var(--cl-bg2);overflow:hidden;box-shadow:0 0 0 10px #0B0B14,0 0 0 12px #3a3556,0 30px 80px rgba(0,0,0,.5);isolation:isolate}
+@media (max-width:480px){body{display:block;background:var(--cl-bg2)}.phone{width:100%;height:100dvh;max-height:none;border-radius:0;box-shadow:none}}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--cl-bg2)}
+.rule{position:absolute;left:0;right:0;top:0;height:4px;background:var(--gn-spectrum);z-index:60;pointer-events:none}
+
+/* ---------- splash ---------- */
+.splash{background:#0B0B14;color:#fff;align-items:center;justify-content:center;z-index:5}
+.splash img{width:210px;height:auto;animation:pop .9s cubic-bezier(.2,.8,.2,1) both}
+.splash .sbar{width:210px;height:8px;border-radius:99px;margin:26px 0 18px;background:var(--gn-spectrum);background-size:300% 100%;animation:slide 2.4s linear infinite}
+.splash .forum{font:700 15px var(--gn-font-head);letter-spacing:.35em;text-transform:uppercase;color:#E9E6F7;animation:fade 1s .5s both}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+@keyframes slide{to{background-position:300% 0}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ---------- carrousel ---------- */
+.onb{background:#0B0B14;color:#fff;overflow:hidden}
+.viewport{position:absolute;inset:0;overflow:hidden;touch-action:pan-y;cursor:grab}
+.track{display:flex;height:100%;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.track.drag{transition:none}
+.slide{flex:0 0 100%;position:relative;height:100%}
+.slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,11,20,.55) 0,rgba(11,11,20,0) 22%,rgba(11,11,20,.35) 45%,rgba(11,11,20,.92) 72%,#0B0B14 100%)}
+.slide .txt{position:absolute;left:24px;right:24px;bottom:150px;z-index:2}
+.slide h2{font-size:28px;font-weight:800;margin-bottom:10px;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.slide p{font-size:16px;color:#F1EEFB;line-height:1.55}
+.onb-top{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;justify-content:space-between;padding:20px 16px 0 22px}
+.onb-top img{height:30px;width:auto}
+.skip{min-height:44px;min-width:44px;padding:0 16px;border-radius:99px;border:2px solid rgba(255,255,255,.7);background:rgba(11,11,20,.45);color:#fff;font-weight:700;font-size:14px}
+.onb-bot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:0 24px 30px;display:flex;align-items:center;justify-content:space-between}
+.dots{display:flex}
+.dot{width:44px;height:44px;border:0;background:none;display:grid;place-items:center;padding:0}
+.dot i{display:block;width:10px;height:10px;border-radius:99px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);transition:all .25s}
+.dot[aria-current=true] i{width:28px;background:#fff}
+
+/* ---------- boutons / champs (forum) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;border-radius:999px;border:2px solid var(--cl-pri);font:700 14px/1 var(--gn-font-head);background:var(--cl-pri);color:#fff;text-decoration:none}
+html[data-bg=dark] .btn{color:#0B0B14}
+.btn:hover{background:var(--cl-pri-d);border-color:var(--cl-pri-d)}
+.btn.light{background:#fff;color:#0B0B14;border-color:#fff}
+.btn.out{background:transparent;color:var(--cl-pri)}
+html[data-bg=dark] .btn.out{color:var(--cl-pri)}
+.btn.out:hover{background:var(--cl-pri);color:#fff}
+.btn.red{background:var(--cl-danger);border-color:var(--cl-danger);color:#fff}
+html[data-bg=dark] .btn.red{color:#0B0B14}
+.btn.grey{background:var(--cl-in);border-color:var(--cl-in);color:var(--cl-tx)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.fc{width:100%;min-height:46px;padding:0 16px;border:2px solid var(--cl-bd);border-radius:14px;background:var(--cl-in);color:var(--cl-tx);font:14px Arial,sans-serif}
+.fc::placeholder{color:var(--cl-ph)}
+.fc:focus{outline:none;border-color:var(--cl-pri);box-shadow:0 0 0 4px rgba(43,51,201,.18);background:var(--cl-bg)}
+textarea.fc{padding:12px 16px;line-height:1.5;resize:none}
+.lnk{background:none;border:0;padding:0;color:var(--cl-pri);font:700 14px var(--gn-font-head);text-decoration:underline;text-underline-offset:3px;min-height:44px}
+.err{font-size:13px;font-weight:700;color:var(--cl-danger);min-height:0}
+.err:empty{display:none}
+
+/* ---------- guest ---------- */
+.guest{padding:8px 12px;justify-content:center;justify-content:safe center;overflow:hidden;background:var(--cl-bg)}
+.gcard{position:relative;background:var(--cl-bg);border:1px solid var(--cl-bd);border-radius:28px;padding:22px 20px 14px;box-shadow:var(--cl-sh2);overflow:hidden}
+.gcard::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--gn-spectrum)}
+.tabs{display:flex;background:var(--cl-in);border-radius:999px;padding:4px;margin-bottom:14px}
+.tabs button{flex:1;min-height:44px;border:0;border-radius:999px;background:transparent;color:var(--cl-tx);font:800 14px var(--gn-font-head)}
+.tabs button[aria-selected=true]{background:var(--cl-active-bg);color:var(--cl-active-tx)}
+.fld{display:grid;gap:5px;margin-bottom:11px}
+.fld>label{font:700 12.5px var(--gn-font-head)}
+.pw{position:relative}.pw .fc{padding-right:84px}
+.pw button{position:absolute;right:6px;top:0;height:46px;min-width:60px;border:0;background:none;color:var(--cl-pri);font:700 13px var(--gn-font-head)}
+.rowb{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chk{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:4px 0;font-size:13px;line-height:1.4}
+.chk input{width:22px;height:22px;margin:0;accent-color:var(--cl-pri);flex:none}
+.help{text-align:center;font-size:13.5px;color:var(--cl-tx);padding-top:8px}
+.help .lnk{font-size:13.5px;min-height:36px;display:inline}
+.gfoot{display:flex;flex-wrap:wrap;gap:2px 16px;justify-content:center;padding:12px 0 0;font-size:12px}
+.gfoot a{color:var(--cl-pri);padding:6px 0;text-decoration:underline}
+.cookie{position:absolute;left:12px;right:12px;bottom:12px;z-index:40;background:#0B0B14;color:#fff;border-radius:24px;padding:18px 18px 22px;box-shadow:0 12px 32px rgba(0,0,0,.4);overflow:hidden}
+.cookie::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--gn-spectrum)}
+.cookie h2{font-size:15px;margin-bottom:6px}
+.cookie p{font-size:13px;color:#D4D0E6;margin-bottom:12px}
+.cookie a{color:#8FA2FF}
+.cookie .btn{margin-right:14px}
+
+/* ---------- application ---------- */
+.app{background:var(--cl-bg2)}
+.views{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:84px;background:var(--cl-bg)}
+.hdr{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;height:61px;padding:4px 14px 0;background:var(--cl-bg);border-bottom:1px solid var(--cl-bd);box-shadow:0 2px 5px rgba(0,0,0,.02)}
+.hdr h1{flex:0 0 160px;padding-right:50px;font:800 14px/1.2 var(--gn-font-head);color:var(--cl-tx)}
+.hdr img{height:25px;width:auto}
+.hdr .back{margin-left:auto;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--cl-in);color:var(--cl-tx)}
+.hdr .back svg{width:20px;height:20px}
+.navbar{position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 12px 12px;pointer-events:none}
+.navin{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;background:var(--gn-ink);border-radius:999px;padding:6px 10px;box-shadow:rgba(23,19,43,.25) 0 12px 32px 0}
+.navin button{width:55px;height:44px;border:0;border-radius:50%;background:none;color:#B9B4D0;display:grid;place-items:center;padding:0}
+.navin button svg{width:24px;height:24px;fill:currentColor}
+.navin button.active{background:#fff;color:var(--gn-ink)}
+.navin .navbadge{position:relative}
+
+/* tiroir */
+.drawer{position:absolute;inset:0;z-index:50;display:flex}
+.drawer .scrim{position:absolute;inset:0;background:rgba(11,11,20,.45)}
+.drawer nav{position:relative;width:78%;max-width:300px;height:100%;overflow-y:auto;background:var(--cl-bg2);padding:14px 12px 20px;animation:dr .25s ease both;box-shadow:rgba(0,0,0,.25) 0 0 30px}
+@keyframes dr{from{transform:translateX(-100%)}to{transform:none}}
+.dwho{display:flex;gap:12px;align-items:center;width:100%;min-height:52px;padding:4px 8px;border:0;background:none;text-align:left;font:700 14px var(--gn-font-head)}
+.dit{display:flex;gap:14px;align-items:center;width:100%;min-height:44px;padding:0 14px;margin:1px 0;border:0;border-radius:999px;background:none;color:var(--cl-tx);font:600 13px var(--gn-font-head);text-align:left}
+.dit svg{width:22px;height:22px;flex:none;fill:currentColor;opacity:.85}
+.dit.active{background:var(--cl-active-bg);color:var(--cl-active-tx)}
+.dit.logout{background:var(--gn-sos);color:#fff;justify-content:center;margin-top:10px}
+html[data-bg=dark] .dit.logout{background:#FF6B5C;color:#0B0B14}
+.dsep{height:1px;background:var(--cl-bd);margin:8px 8px}
+.dfoot{display:flex;flex-wrap:wrap;gap:0 14px;padding:4px 10px;font-size:12px;color:var(--cl-tx2)}
+.dfoot span{padding:6px 0}
+
+.av{display:grid;place-items:center;border-radius:50%;color:#fff;font:800 15px var(--gn-font-head);flex:none}
+.av.s40{width:40px;height:40px}.av.s52{width:52px;height:52px}
+.av.def{background:#C8200E}
+
+/* fil */
+.timeline{background:var(--cl-bg)}
+.pub{padding:10px 10px 6px}
+.pubrow{display:flex;gap:10px;align-items:flex-start}
+.pubinput{flex:1;min-height:71px;padding:8px 12px;border:2px solid var(--cl-bd2);border-radius:16px;background:var(--cl-in);color:var(--cl-ph);font:15px/1.4 Arial,sans-serif;text-align:left;width:100%}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;padding:14px 4px 6px 4px}
+.gchip{border:0;border-radius:999px;padding:8px 14px;min-height:36px;font:700 12px/1 var(--gn-font-head);color:#17132B;background:#E6E9FF}
+.gchip.p{background:#FFE3F1}.gchip.g{background:#E4F6EE}.gchip.y{background:#FFF1CC}
+html[data-bg=dark] .gchip{background:#1E2552;color:#DDE3FF}html[data-bg=dark] .gchip.p{background:#3D1B33;color:#FFD3EA}html[data-bg=dark] .gchip.g{background:#12302A;color:#BFF0D6}html[data-bg=dark] .gchip.y{background:#3A2F12;color:#FFE6A3}
+.tools{display:flex;gap:6px;padding:6px 0 8px;color:var(--cl-pri)}
+.tools button{width:36px;height:36px;border:0;background:none;color:var(--cl-pri);display:grid;place-items:center;padding:0}
+.tools svg{width:22px;height:22px;fill:currentColor}
+.pubfoot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--cl-bd);padding:6px 0 4px}
+.pubfoot .glob{width:44px;height:44px;display:grid;place-items:center;color:var(--cl-pri)}
+.pubfoot .btn{min-height:40px;padding:0 20px;font-size:13px}
+.stories{display:flex;gap:14px;overflow-x:auto;padding:12px 10px 10px}
+.st{flex:none;width:62px;display:grid;justify-items:center;gap:4px;background:none;border:0;padding:0;min-height:44px}
+.ring{position:relative;width:55px;height:55px;border-radius:50%;padding:3px;background:var(--gn-spectrum)}
+.ring>span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;border:2px solid var(--cl-bg);font:800 15px var(--gn-font-head);color:#fff}
+.ring.mine{background:none;border:2px dashed var(--cl-pri);padding:0}
+.ring.mine>span{border:0}
+.ring .plus{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--cl-pri);color:#fff;display:grid;place-items:center;border:2px solid var(--cl-bg);font:800 14px/1 Arial}
+html[data-bg=dark] .ring .plus{color:#0B0B14}
+.st small{font:700 12px/1.2 var(--gn-font-head);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--cl-tx)}
+.band{height:10px;background:var(--cl-bg2);border-top:1px solid var(--cl-bd);border-bottom:1px solid var(--cl-bd)}
+.post{display:flex;gap:10px;padding:12px 10px 4px;border-bottom:1px solid var(--cl-bd)}
+.post .main{flex:1;min-width:0}
+.post .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.post .nm{font-weight:700;font-size:14px}
+.post .hl{color:var(--cl-tx2);font-size:13px}
+.post .dt{color:var(--cl-tx2);font-size:12px;white-space:nowrap}
+.post .tx{margin:6px 0 4px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.pa{display:flex;justify-content:space-between;padding:2px 4px 4px 0}
+.pa button{min-height:44px;min-width:44px;border:0;background:none;display:flex;align-items:center;gap:6px;color:var(--cl-tx2);font:13px Arial;padding:0 6px}
+.pa svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pa button[aria-pressed=true]{color:var(--cl-pri);font-weight:700}
+.pa button[aria-pressed=true] svg{fill:color-mix(in srgb,var(--cl-pri) 25%,transparent)}
+
+/* éducation / BD (gn-edu-, gn-bd-) */
+.intro{padding:20px 14px 6px}
+.intro h1{margin:0 0 6px;font:800 18.5px/1.25 var(--gn-font-head)}
+.intro p{color:var(--cl-tx2);font-size:13.5px;line-height:1.55}
+.cats{display:flex;flex-wrap:wrap;gap:8px;padding:14px 14px 4px}
+.chipl{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 13px;border-radius:999px;border:2px solid var(--cl-bd);background:var(--cl-bg);color:var(--cl-tx);font:700 12px/1 var(--gn-font-head)}
+.chipl span{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--cl-bg2);font-size:11px}
+.chipl[aria-pressed=true]{background:var(--cl-active-bg);border-color:var(--cl-active-bg);color:var(--cl-active-tx)}
+.chipl[aria-pressed=true] span{background:rgba(255,255,255,.2);color:inherit}
+html[data-bg=dark] .chipl[aria-pressed=true] span{background:rgba(11,11,20,.18)}
+.grid{list-style:none;margin:0;padding:14px 14px 22px;display:grid;gap:16px}
+.ecard{display:block;width:100%;text-align:left;padding:0;border:1px solid var(--cl-bd);border-radius:22px;background:var(--cl-bg);box-shadow:var(--cl-sh);overflow:hidden;color:inherit}
+.eimg{position:relative;display:block;aspect-ratio:16/9;background:linear-gradient(135deg,#5B2BB8,#2B33C9 55%,#0A66E8);overflow:hidden}
+.eimg img{display:block;width:100%;height:100%;object-fit:cover}
+.eimg.intimite{background:linear-gradient(135deg,#9B1156,#C2185B 55%,#F66100)}
+.eimg.surveillance{background:linear-gradient(135deg,#0B0B14,#2B33C9)}
+.eimg.comptes{background:linear-gradient(135deg,#0F8B6D,#0A66E8)}
+.eimg.manipulation{background:linear-gradient(135deg,#F66100,#FFBE05)}
+.eimg.haine{background:linear-gradient(135deg,#C8200E,#5B2BB8)}
+.eimg.technologie{background:linear-gradient(135deg,#3F9A1A,#0F8B6D 55%,#0A66E8)}
+.eimg.bd{aspect-ratio:4/3;background:var(--gn-ink)}
+.pin{position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:999px;background:var(--gn-yellow);color:var(--gn-ink);font:800 11px/1.2 var(--gn-font-head)}
+.ebody{display:flex;flex-direction:column;gap:6px;padding:14px 16px 16px}
+.ecat{align-self:flex-start;display:inline-block;padding:4px 10px;border-radius:999px;background:var(--cl-bg2);color:var(--cl-pri);font:800 10.5px/1.2 var(--gn-font-head);letter-spacing:.04em;text-transform:uppercase}
+.etitle{font:800 14.5px/1.3 var(--gn-font-head);color:var(--cl-tx)}
+.esum{font-size:12.5px;line-height:1.5;color:var(--cl-tx2)}
+.emeta{font-size:11.5px;color:var(--cl-tx2)}
+.conv{display:inline-block;padding:4px 10px;border-radius:999px;background:var(--gn-yellow);color:var(--gn-ink);font:800 10.5px/1.2 var(--gn-font-head);letter-spacing:.04em;text-transform:uppercase}
+.ehelp{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:6px 14px 22px;padding:16px 20px;border-radius:22px;background:var(--gn-ink);color:#fff}
+.ehelp b{display:block;font:800 14px/1.3 var(--gn-font-head)}
+.ehelp span{display:block;margin-top:2px;font-size:12.5px;color:#B9B4D0}
+.ehelp .btn{background:#fff;border-color:#fff;color:var(--gn-ink)}
+.ov{z-index:20;background:var(--cl-bg)}
+.doc{padding:18px 14px 6px}
+.back2{display:inline-flex;align-items:center;min-height:44px;margin-bottom:4px;background:none;border:0;padding:0;font:700 12.5px var(--gn-font-head);color:var(--cl-pri)}
+.doc h1{margin:10px 0 8px;font:800 22px/1.25 var(--gn-font-head)}
+.doc .sum{margin:0 0 8px;font-size:14px;line-height:1.55;color:var(--cl-tx)}
+.dbody{font-size:14px;line-height:1.7}
+.dbody h2{margin:22px 0 8px;font:800 16px/1.3 var(--gn-font-head)}
+.dbody p{margin:0 0 12px}.dbody ul,.dbody ol{margin:0 0 14px;padding-left:22px}.dbody li{margin-bottom:5px}
+.dbody blockquote{margin:14px 0;padding:12px 16px;border-left:5px solid var(--cl-pri);border-radius:0 14px 14px 0;background:var(--cl-bg)}
+.callout{margin:16px 0;padding:14px 18px;border-radius:16px;background:#FFF1CC;border:2px solid var(--gn-yellow);color:#17132B}
+.callout b{display:block;margin-bottom:4px;font:800 11px/1.3 var(--gn-font-head);letter-spacing:.06em;text-transform:uppercase}
+.bar{display:inline-flex;margin:8px 0 14px;padding:3px;border-radius:999px;background:var(--cl-bg)}
+.bar button{min-height:44px;border:0;border-radius:999px;background:transparent;padding:0 15px;font:700 12px/1 var(--gn-font-head);color:var(--cl-tx2)}
+.bar button[aria-pressed=true]{background:var(--cl-active-bg);color:var(--cl-active-tx)}
+.tools2{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.lay{min-height:44px;padding:0 16px;border-radius:999px;border:2px solid var(--gn-ink);background:var(--gn-ink);color:#fff;font:700 12px/1 var(--gn-font-head)}
+html[data-bg=dark] .lay{background:var(--cl-pri);border-color:var(--cl-pri);color:#0B0B14}
+.lay[aria-pressed=false]{background:transparent;color:var(--cl-tx);border-color:var(--cl-bd2)}
+.lay.rev{background:transparent;color:var(--cl-tx);border-color:var(--cl-bd2)}
+.lay.rev[aria-pressed=true]{background:var(--cl-pri);color:#fff;border-color:var(--cl-pri)}
+.lay.more{border-color:var(--cl-pri);background:var(--cl-bg);color:var(--cl-pri)}
+details.leg{margin:0 0 14px;border:2px solid var(--cl-bd2);border-radius:14px;background:var(--cl-bg)}
+details.leg summary{min-height:46px;display:flex;align-items:center;padding:0 16px;font:700 13px var(--gn-font-head);cursor:pointer}
+details.leg .lb{padding:0 16px 14px;font-size:13px}
+details.leg ul{margin:8px 0 0;padding-left:18px}
+.panels{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.panels.step .pn{display:none}.panels.step .pn.on{display:block}
+.pn figure{margin:0;border:2px solid var(--gn-ink);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--cl-sh)}
+html[data-bg=dark] .pn figure{border-color:#3A3560}
+.stage{position:relative;line-height:0;container-type:inline-size}
+.stage img{display:block;width:100%;height:auto}
+.say{margin:0;padding:12px 16px;background:#fff;color:#17132B;border-top:2px solid var(--gn-ink);font:700 14px/1.45 var(--gn-font-head)}
+.pn figcaption{padding:10px 16px 12px;background:var(--cl-bg);font-size:13px;line-height:1.5;color:var(--cl-tx)}
+.pn .n{display:inline-grid;place-items:center;width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--gn-ink);color:#fff;font:800 11px/1 var(--gn-font-head)}
+html[data-bg=dark] .pn .n{background:var(--cl-pri);color:#0B0B14}
+.pnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px}
+.pcount{font:700 12.5px var(--gn-font-head);color:var(--cl-tx2)}
+/* bulles (gn-conv) */
+.c-vert{--b:#17703A;--t:#E4F6EE}.c-jaune{--b:#9A5B00;--t:#FFF1CC}.c-orange{--b:#C2410C;--t:#FFE8DC}.c-rouge{--b:#C8200E;--t:#FDE7E3}.c-bleu{--b:#0A66E8;--t:#E3EEFF}.c-violet{--b:#5B2BB8;--t:#EEE8FB}
+html[data-bg=dark] .c-vert{--b:#58D68D;--t:#12302A}html[data-bg=dark] .c-jaune{--b:#FFBE05;--t:#3A2F12}html[data-bg=dark] .c-orange{--b:#FF9A5C;--t:#3B2012}html[data-bg=dark] .c-rouge{--b:#FF6B5C;--t:#3D1511}html[data-bg=dark] .c-bleu{--b:#8FA2FF;--t:#12254A}html[data-bg=dark] .c-violet{--b:#B79CFF;--t:#2A1B52}
+.over{position:absolute;inset:0;pointer-events:none}
+.bub{--ink:#0B0B14;--ax:50%;--ay:100%;position:absolute;transform:translate(-50%,-50%);width:max-content;max-width:min(46%,260px);color:var(--ink);font:14px/1.3 Arial,sans-serif;animation:bi .35s ease both}
+html[data-bg=dark] .bub{--ink:#F2EFFA}
+@keyframes bi{from{opacity:0;transform:translate(-50%,-44%)}to{opacity:1;transform:translate(-50%,-50%)}}
+.bub .in{display:block;position:relative;background:var(--t);border:2.5px solid var(--b);border-radius:18px}
+.bub .fill{display:block;padding:6px 26px 7px 10px;overflow-wrap:anywhere;line-height:1.3}
+.bub .ico{position:absolute;top:6px;right:7px;width:17px;height:17px;fill:var(--b)}
+.bub .who{display:block;font-weight:700;font-size:14px;margin-bottom:1px}
+.bub .head{display:flex;align-items:center;gap:5px;margin-bottom:2px;font:800 13px/1.2 var(--gn-font-head);letter-spacing:.02em;text-transform:uppercase}
+.bub .tail{position:absolute;left:var(--ax);top:var(--ay);width:14px;height:14px;background:var(--t);border:2.5px solid var(--b);transform:translate(-50%,-50%) rotate(45deg)}
+.bub.t-b .tail,.bub.t-bl .tail,.bub.t-br .tail{border-left:0;border-top:0;margin-top:-1px}
+.bub.t-t .tail,.bub.t-tl .tail,.bub.t-tr .tail{border-right:0;border-bottom:0;margin-top:1px}
+.bub.t-l .tail{border-right:0;border-top:0}.bub.t-r .tail{border-left:0;border-bottom:0}
+.t-b{--ax:50%;--ay:100%}.t-bl{--ax:24%;--ay:100%}.t-br{--ax:76%;--ay:100%}.t-t{--ax:50%;--ay:0%}.t-tl{--ax:24%;--ay:0%}.t-tr{--ax:76%;--ay:0%}.t-l{--ax:0%;--ay:50%}.t-r{--ax:100%;--ay:50%}
+.bub.pense .in{border-style:dashed;border-radius:24px}
+.bub.pense .tail{width:11px;height:11px;border-radius:50%;transform:translate(-50%,40%);border:2px solid var(--b)}
+.bub.ressent .in{padding:3px;background:var(--b);border:0;border-radius:0;clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 11px,100% calc(100% - 11px),calc(100% - 11px) 100%,11px 100%,0 calc(100% - 11px),0 11px)}
+.bub.ressent .fill{background:var(--t);padding:5px 10px 6px;clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px)}
+.bub.ressent .tail{display:none}
+.bub.dim{opacity:.18}
+
+/* alerte (chat) */
+.gnal{display:flex;flex-direction:column;height:100%;padding:0 0 84px}
+.gnal__box{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--cl-bg);border-bottom:1px solid var(--cl-bd);overflow:hidden}
+.gnal__h{display:flex;align-items:center;gap:12px;padding:16px 14px 14px;background:var(--gn-ink);color:#fff;position:relative;flex:none}
+.gnal__h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--gn-spectrum)}
+.gnal__av{width:40px;height:40px;flex:none;border-radius:50%;background:linear-gradient(135deg,#5B2BB8,#0A66E8,#FFBE05,#E8381A);display:grid;place-items:center;font:800 16px var(--gn-font-head)}
+.gnal__h b{display:block;font:800 15px var(--gn-font-head)}.gnal__h small{color:#B9B4D0;font-size:12px;display:block;line-height:1.3}
+.gnal__lock{margin-left:auto;font-size:11.5px;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 10px;line-height:1.2;text-align:center}
+.gnal__log{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--cl-bg2)}
+.gm{max-width:88%;padding:10px 14px;border-radius:20px;line-height:1.5;font-size:14px;word-break:break-word}
+.gm.bot{align-self:flex-start;background:var(--cl-bg);border:1px solid var(--cl-bd);border-bottom-left-radius:6px}
+.gm.me{align-self:flex-end;background:var(--cl-pri);color:#fff;border-bottom-right-radius:6px}
+html[data-bg=dark] .gm.me{color:#0B0B14}
+.gm.team{align-self:flex-start;background:#E4F6EE;border:1px solid #BFE6D2;border-bottom-left-radius:6px;color:#17132B}
+.gm.ok{align-self:stretch;max-width:none;background:#E4F6EE;color:#17132B;border-radius:16px}
+.gm .tag{display:block;font:700 11px var(--gn-font-head);color:#0F6B4D;margin-bottom:2px}
+.qr{display:flex;flex-wrap:wrap;gap:8px}
+.qr button{min-height:44px;padding:4px 16px;border-radius:999px;border:2px solid var(--cl-pri);background:var(--cl-bg);color:var(--cl-pri);font:700 13px/1.2 var(--gn-font-head);text-align:left}
+.qr button:hover,.qr button:focus-visible{background:var(--cl-pri);color:#fff}
+.sumbox{background:var(--cl-bg);border:1px solid var(--cl-bd);border-radius:16px;padding:12px 16px;font-size:13.5px}
+.sumbox dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}.sumbox dt{color:var(--cl-tx2)}.sumbox dd{margin:0;font-weight:700;word-break:break-word}
+.gnal__f{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--cl-bd);background:var(--cl-bg);flex:none}
+.gnal__f textarea{flex:1;min-height:46px;max-height:46px;padding:12px 16px;border:2px solid var(--cl-bd);border-radius:23px;background:var(--cl-in);color:var(--cl-tx);font:14px Arial,sans-serif;resize:none}
+.gnal__f textarea:focus{outline:none;border-color:var(--cl-pri);box-shadow:0 0 0 4px rgba(43,51,201,.18)}
+.gnal__f button{min-height:46px;padding:0 20px;border:0;border-radius:999px;background:var(--cl-pri);color:#fff;font:700 13px var(--gn-font-head)}
+html[data-bg=dark] .gnal__f button{color:#0B0B14}
+.gnal__f button:disabled,.gnal__f textarea:disabled{opacity:.5;cursor:not-allowed}
+.sosrow{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--cl-bg);border-top:1px solid var(--cl-bd);flex:none}
+.sos{position:relative;flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--gn-sos);color:#fff;font:800 14px var(--gn-font-head);display:grid;place-items:center;touch-action:none;user-select:none}
+html[data-bg=dark] .sos{background:#FF6B5C;color:#0B0B14}
+.sos svg{position:absolute;inset:-5px;width:62px;height:62px;transform:rotate(-90deg);pointer-events:none}
+.sos circle{fill:none;stroke-width:4;stroke-linecap:round}
+.sosrow p{font-size:12px;line-height:1.4;color:var(--cl-tx2)}
+
+/* profil */
+.cover{height:104px;background:#C8200E}
+.pbox{padding:0 14px 8px;background:var(--cl-bg)}
+.pav{margin-top:-44px;width:88px;height:88px;border:4px solid var(--cl-bg);font-size:30px}
+.prow{display:flex;justify-content:space-between;align-items:flex-end;margin-top:-44px;height:44px}
+.pbox h2{font-size:17px;margin-top:8px}
+.pbox .h{color:var(--cl-tx2);font-size:13px}
+.stats{display:flex;gap:14px;margin:8px 0;font-size:14px}
+.info{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--cl-tx);min-height:28px}
+.info svg{width:20px;height:20px;fill:none;stroke:var(--cl-tx2);stroke-width:1.8}
+.ptabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--cl-bg);border-bottom:1px solid var(--cl-bd);margin-top:6px}
+.ptabs button{min-height:48px;border:0;border-bottom:3px solid transparent;background:none;color:var(--cl-tx2);font:700 11.5px var(--gn-font-head);letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:6px}
+.ptabs button[aria-selected=true]{color:var(--cl-pri);border-color:var(--cl-pri)}
+.ptabs svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.empty{padding:26px 22px;text-align:center;background:var(--cl-bg);display:grid;justify-items:center;gap:10px}
+.empty .ic{width:70px;height:70px;border-radius:50%;background:var(--cl-bg2);display:grid;place-items:center;color:var(--cl-pri)}
+.empty h3{font-size:15px}.empty p{font-size:13px;color:var(--cl-tx2);max-width:30ch}
+.set{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:6px 0;border-bottom:1px solid var(--cl-bd)}
+.set strong{display:block;font-size:14px}.set small{display:block;color:var(--cl-tx2);font-size:12.5px;line-height:1.35}
+.sw{position:relative;flex:none;width:56px;height:44px;border:0;background:none;padding:0}
+.sw::before{content:"";position:absolute;left:0;top:8px;width:56px;height:28px;border-radius:99px;background:#6E6890;transition:.2s}
+.sw::after{content:"";position:absolute;left:4px;top:12px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.sw[aria-checked=true]::before{background:#17703A}html[data-bg=dark] .sw[aria-checked=true]::before{background:#3FA866}
+.sw[aria-checked=true]::after{left:32px}
+
+/* autres vues */
+.list{background:var(--cl-bg)}
+.li{display:flex;gap:12px;align-items:center;width:100%;min-height:64px;padding:10px 14px;border:0;border-bottom:1px solid var(--cl-bd);background:none;text-align:left;color:var(--cl-tx)}
+.li b{display:block;font-size:14px}.li small{display:block;color:var(--cl-tx2);font-size:12.5px}
+.li .meta{margin-left:auto;font-size:12px;color:var(--cl-tx2);white-space:nowrap}
+.srch{padding:12px 14px;background:var(--cl-bg)}
+.tagl{font:800 13px var(--gn-font-head);letter-spacing:.04em;text-transform:uppercase;padding:14px 14px 6px}
+.fictif{font-size:12px;color:var(--cl-tx2);text-align:center;padding:14px 16px}
+
+/* feuille / toast */
+.sheet{position:absolute;inset:0;z-index:70;background:rgba(11,11,20,.6);display:flex;align-items:flex-end}
+.sheet .in{width:100%;max-height:88%;overflow-y:auto;background:var(--cl-bg);border-radius:28px 28px 0 0;padding:18px 18px 24px;color:var(--cl-tx)}
+.sheet h3{font-size:18px;margin-bottom:8px}
+.sheet .grip{width:44px;height:5px;border-radius:99px;background:var(--cl-bd2);margin:0 auto 12px}
+.toast{position:absolute;left:16px;right:16px;bottom:96px;z-index:80;background:#0B0B14;color:#fff;border-radius:16px;padding:12px 16px;font-size:13.5px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:fade .2s}
+html[data-bg=dark] .toast{background:#fff;color:#0B0B14}
+
+/* écrans courts (360x640) */
+@media (max-height:700px){
+  .guest{padding:8px 10px}.gcard{padding:16px 16px 8px}.tabs{margin-bottom:8px}.tabs button{min-height:40px}.fld{margin-bottom:7px;gap:3px}.fc{min-height:44px}.pw button{height:44px}.chk{min-height:44px;padding:0}.help{padding-top:2px}.gfoot{display:none}
+  .gnal__h{padding:10px 12px 10px}.gm{padding:8px 12px}.gnal__log{padding:10px;gap:8px}.sosrow{padding:6px 12px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+
+<section class="screen splash" id="splash" aria-label="Chargement de GANXÔ Forum">
+  <img src="assets/logo-blanc.png" alt="GANXÔ"><div class="sbar" aria-hidden="true"></div><div class="forum">Forum</div>
+</section>
+
+<section class="screen onb" id="onb" hidden aria-roledescription="carousel" aria-label="Bienvenue sur GANXÔ Forum">
+  <div class="viewport" id="vp"><div class="track" id="track">
+    <div class="slide" role="group" aria-roledescription="diapositive" aria-label="1 sur 4"><img src="assets/slide-3.webp" style="object-position:50% 35%" alt="Une personne de dos aux cheveux bouclés, un drapeau arc-en-ciel sur les épaules, face à un coucher de soleil dans une rue calme." width="800" height="1200"><div class="txt"><h2>Un espace sûr pour parler</h2><p>Échangez avec d’autres personnes LGBTQ, à votre rythme, sans jugement. Vous restez maître de ce que vous partagez.</p></div></div>
+    <div class="slide" role="group" aria-roledescription="diapositive" aria-label="2 sur 4"><img src="assets/slide-1.webp" style="object-position:50% 30%" alt="Gros plan sur une main qui tient un drapeau arc-en-ciel, un poignet orné d’une montre." width="800" height="1200"><div class="txt"><h2>Apprendre à se protéger</h2><p>Des fiches éducatives et des bandes dessinées pour reconnaître les violences en ligne et savoir quoi faire.</p></div></div>
+    <div class="slide" role="group" aria-roledescription="diapositive" aria-label="3 sur 4"><img src="assets/slide-2.webp" style="object-position:62% 30%" alt="Un jeune homme de profil, le regard au loin, un drapeau arc-en-ciel drapé sur les épaules, devant un mur de pierre." width="800" height="1200"><div class="txt"><h2>Demander de l’aide, en confidentialité</h2><p>Créez une alerte par un simple chat, avec ou sans adresse e-mail. Votre anonymat est respecté.</p></div></div>
+    <div class="slide" role="group" aria-roledescription="diapositive" aria-label="4 sur 4"><img src="assets/slide-4.webp" style="object-position:40% 30%" alt="Une personne aux tresses roses, les yeux fermés, la tête posée sur ses mains, enveloppée dans un drapeau arc-en-ciel devant une fresque murale." width="800" height="1200"><div class="txt"><h2>Vous avez votre place ici</h2><p>Lesbiennes, gays, bi, trans… la communauté vous accueille. Choisissez un pseudonyme : votre nom n’est jamais demandé.</p></div></div>
+  </div></div>
+  <div class="onb-top"><img src="assets/logo-blanc.png" alt="GANXÔ"><button class="skip" id="skip">Passer</button></div>
+  <div class="onb-bot"><div class="dots" id="dots" role="group" aria-label="Choisir une diapositive"></div><button class="btn light" id="next">Suivant</button></div>
+  <div class="vh" aria-live="polite" id="live"></div>
+</section>
+
+<!-- Page invité : connexion / inscription (comme /guest du forum en mobile) -->
+<section class="screen guest" id="auth" hidden aria-label="Connexion ou inscription">
+  <div class="rule" aria-hidden="true"></div>
+  <h1 class="vh">GANXÔ Forum : rejoignez-nous</h1>
+  <div class="gcard">
+    <div class="tabs" role="tablist" aria-label="Connexion ou inscription">
+      <button role="tab" id="tab-in" aria-selected="true" aria-controls="p-in">Connexion</button>
+      <button role="tab" id="tab-up" aria-selected="false" aria-controls="p-up" tabindex="-1">Inscription</button>
+    </div>
+    <form id="p-in" role="tabpanel" aria-labelledby="tab-in" novalidate>
+      <div class="fld"><label for="in-id">Adresse e-mail ou nom d’utilisateur</label><input class="fc" id="in-id" autocomplete="username" placeholder="vous@exemple.org ou votre pseudo"></div>
+      <div class="fld"><label for="in-pw">Mot de passe</label><div class="pw"><input class="fc" id="in-pw" type="password" autocomplete="current-password" placeholder="Votre mot de passe"><button type="button" data-show="in-pw" aria-label="Afficher le mot de passe">Afficher</button></div></div>
+      <div class="rowb"><label class="chk"><input type="checkbox" checked> Rester connecté·e</label><button type="button" class="lnk" data-toast="Un lien de réinitialisation serait envoyé (simulé).">Mot de passe oublié ?</button></div>
+      <div class="err" id="in-err" role="alert"></div>
+      <button class="btn block" type="submit" style="min-height:52px;font-size:15px;margin-top:2px">Se connecter</button>
+    </form>
+    <form id="p-up" role="tabpanel" aria-labelledby="tab-up" hidden novalidate>
+      <div class="fld"><label for="up-ps">Nom d’utilisateur</label><input class="fc" id="up-ps" autocomplete="nickname" placeholder="Choisissez un pseudonyme"></div>
+      <div class="fld"><label for="up-em">Adresse e-mail</label><input class="fc" id="up-em" type="email" autocomplete="email" placeholder="vous@exemple.org"></div>
+      <div class="fld"><label for="up-pw">Mot de passe</label><div class="pw"><input class="fc" id="up-pw" type="password" autocomplete="new-password" placeholder="6 à 20 caractères"><button type="button" data-show="up-pw" aria-label="Afficher le mot de passe">Afficher</button></div></div>
+      <div class="fld"><label for="up-pw2">Confirmer le mot de passe</label><div class="pw"><input class="fc" id="up-pw2" type="password" autocomplete="new-password" placeholder="Retapez le mot de passe"><button type="button" data-show="up-pw2" aria-label="Afficher la confirmation">Afficher</button></div></div>
+      <label class="chk"><input type="checkbox" id="up-age"> <span>J’accepte les <a href="#" data-toast="Conditions d’utilisation (simulé).">conditions d’utilisation</a> et la <a href="#" data-toast="Politique de confidentialité (simulé).">politique de confidentialité</a> de Ganho.</span></label>
+      <div class="err" id="up-err" role="alert"></div>
+      <button class="btn block" type="submit" style="min-height:52px;font-size:15px">Créer mon compte</button>
+    </form>
+    <p class="help">Besoin d’aide sans compte ? <button class="lnk" id="guestAlert" type="button">Créer une alerte VBG</button></p>
+    <div class="gfoot"><a href="#" data-toast="Page simulée.">Conditions d’utilisation</a><a href="#" data-toast="Page simulée.">Politique de confidentialité</a><a href="#" data-toast="Page simulée.">Cookies</a></div>
+  </div>
+  <div class="cookie" id="cookie" role="dialog" aria-label="Cookies"><h2>Nous tenons à votre vie privée</h2><p>Votre expérience sur ce site sera améliorée si vous acceptez les cookies. <a href="#" data-toast="Politique des cookies (simulée).">En savoir plus</a></p><button class="btn light" id="cookieOk">Accepter</button></div>
+</section>
+
+<!-- Application -->
+<section class="screen app" id="app" hidden>
+  <div class="rule" aria-hidden="true"></div>
+  <div class="views">
+    <div class="view" id="v-feed" role="region" aria-label="Fil d’actualité">
+      <header class="hdr"><h1>Forum de Discussion</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="timeline">
+        <div class="pub">
+          <div class="pubrow"><span class="av s40 def" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span><button class="pubinput" id="openComposer">Bonjour Aube, Exprimez-vous ?</button></div>
+          <div class="chiprow"><button class="gchip" data-toast="Ajout de photo (simulé).">Photo</button><button class="gchip p" data-toast="Sondage (simulé).">Sondage</button><button class="gchip g" data-toast="Témoignage (simulé).">Témoignage</button><button class="gchip y" data-toast="Événement (simulé).">Événement</button></div>
+          <div class="tools" aria-label="Outils de publication">
+            <button aria-label="Image" data-toast="Image (simulé)."><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 13.5l2.5 3 3.5-4.5L19 18H5z"/></svg></button>
+            <button aria-label="Vidéo" data-toast="Vidéo (simulé)."><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-9 13V8l6 4z"/></svg></button>
+            <button aria-label="Message vocal" data-toast="Vocal (simulé)."><svg viewBox="0 0 24 24"><path d="M7 8h2v8H7zm4-4h2v16h-2zm4 6h2v4h-2zM3 11h2v2H3zm16 0h2v2h-2z"/></svg></button>
+            <button aria-label="Émoji" data-toast="Émoji (simulé)."><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-3.5 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM12 18c-2.3 0-4.2-1.4-5-3.4h10c-.8 2-2.7 3.4-5 3.4z"/></svg></button>
+            <button aria-label="Sondage" data-toast="Sondage (simulé)."><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-6h2zm4 0h-2V7h2zm4 0h-2v-4h2z"/></svg></button>
+            <button aria-label="GIF" data-toast="GIF (simulé)."><svg viewBox="0 0 24 24"><path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM9.5 14.5h-2v-5h3v1h-2v3zm3.5 0h-1v-5h1zm4-4h-2v1h2v1h-2v2h-1v-5h3z"/></svg></button>
+          </div>
+          <div class="pubfoot"><span class="glob" aria-label="Visible par tout le monde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></span><button class="btn" id="openComposer2">Publier</button></div>
+        </div>
+        <div class="stories" id="stories" aria-label="Histoires"></div>
+        <div class="band"></div>
+        <div id="posts"></div>
+        <p class="fictif">Publications et pseudonymes fictifs.</p>
+      </div>
+    </div>
+
+    <div class="view" id="v-edu" hidden role="region" aria-label="Contenus éducatifs">
+      <header class="hdr"><h1>Contenus éducatifs</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="intro"><h1>Comprendre pour mieux se protéger</h1><p>Des fiches claires sur les violences numériques : ce que c’est, comment les reconnaître, que faire et où trouver de l’aide. Rien de tout cela n’est de votre faute.</p></div>
+      <nav class="cats" id="eduCats" aria-label="Filtrer par catégorie"></nav>
+      <ul class="grid" id="eduGrid" aria-live="polite"></ul>
+      <aside class="ehelp"><div><b>Besoin d’en parler ?</b><span>Vous pouvez créer une alerte : l’équipe GANXÔ vous écoute et vous oriente.</span></div><button class="btn" data-go="alert">Créer une alerte VBG</button></aside>
+    </div>
+
+    <div class="view" id="v-bd" hidden role="region" aria-label="Bandes dessinées">
+      <header class="hdr"><h1>Bandes dessinées</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="intro"><h1>Des histoires courtes pour comprendre</h1><p>Quelques cases suffisent pour reconnaître une situation, savoir quoi faire et rappeler que l’on n’est jamais seul·e.</p></div>
+      <ul class="grid" id="bdGrid"></ul>
+    </div>
+
+    <div class="view" id="v-alert" hidden role="region" aria-label="Créer une alerte VBG" style="overflow:hidden;padding:0;background:var(--cl-bg)">
+      <h1 class="vh">Créer une alerte VBG</h1>
+      <div class="gnal">
+        <div class="gnal__box">
+          <div class="gnal__h"><span class="gnal__av" aria-hidden="true">G</span><div><b>Assistant GANXÔ</b><small>Alerte VBG · transmise à l’équipe</small></div><span class="gnal__lock"><span aria-hidden="true">🔒</span> Échange sécurisé</span></div>
+          <div class="gnal__log" id="gnal-log" role="log" aria-live="polite"></div>
+          <form class="gnal__f" id="gnal-form" autocomplete="off"><textarea id="gnal-in" rows="1" maxlength="1000" placeholder="Choisissez une réponse ci-dessus…" aria-label="Votre message" disabled></textarea><button type="submit" id="gnal-send" disabled>Envoyer</button></form>
+        </div>
+        <div class="sosrow"><button class="sos" id="sosBtn" aria-describedby="sosNote" aria-label="SOS : maintenir 2 secondes"><svg viewBox="0 0 62 62" aria-hidden="true"><circle cx="31" cy="31" r="28" stroke="rgba(0,0,0,.12)"/><circle id="sosRing" cx="31" cy="31" r="28" stroke="#FFBE05" stroke-dasharray="176" stroke-dashoffset="176"/></svg><span>SOS</span></button><p id="sosNote"><b>Maintenez 2 s</b> pour préparer votre alerte. Ce bouton ne contacte aucun service d’urgence.</p></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-explore" hidden role="region" aria-label="Explorer">
+      <header class="hdr"><h1>Explorer</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="srch"><label class="vh" for="sx">Rechercher</label><input class="fc" id="sx" placeholder="Rechercher un sujet ou un pseudo"></div>
+      <div class="tagl">Thématiques</div>
+      <div class="list" id="tagList"></div>
+    </div>
+    <div class="view" id="v-notif" hidden role="region" aria-label="Notifications">
+      <header class="hdr"><h1>Notifications</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="list" id="notifList"></div>
+    </div>
+    <div class="view" id="v-msg" hidden role="region" aria-label="Messages">
+      <header class="hdr"><h1>Messages</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"></header>
+      <div class="list" id="msgList"></div>
+      <p class="fictif">Les conversations s’ouvriraient ici (simulé).</p>
+    </div>
+
+    <div class="view" id="v-prof" hidden role="region" aria-label="Profil">
+      <header class="hdr"><h1>Aube Claire</h1><img class="logo" src="assets/logo-couleur.png" alt="GANXÔ"><button class="back" data-go="feed" aria-label="Retour au fil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button></header>
+      <div class="cover" aria-hidden="true"></div>
+      <div class="pbox">
+        <div class="prow"><span class="av pav def" aria-hidden="true"><svg width="44" height="44" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span><span style="display:flex;gap:8px;align-items:center"><button class="icbtn2" aria-label="Plus d’options" data-toast="Options (simulé)." style="width:44px;height:44px;border:0;background:none;color:var(--cl-tx)"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button><button class="btn out" id="openSettings" style="min-height:44px;font-size:12px;padding:0 14px">Paramètres de profil</button></span></div>
+        <h2>Aube Claire</h2><div class="h">@aube_claire · pseudonyme fictif</div>
+        <div class="stats"><span><b>0</b> Des postes</span><span><b>0</b> Suiveurs</span><span><b>5</b> Suivant</span></div>
+        <div class="info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Vivre à - Bénin</div>
+        <div class="info"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Membre depuis - Novembre 2026</div>
+      </div>
+      <div class="ptabs" role="tablist" aria-label="Contenu du profil"><button role="tab" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>DES POSTES</button><button role="tab" aria-selected="false" data-toast="Médias (simulé)."><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg>MÉDIAS</button><button role="tab" aria-selected="false" data-toast="J’aime (simulé)."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H3v-9zM7 11l4-8c2 0 3 1 3 3l-1 4h6a2 2 0 0 1 2 2l-1 6a2 2 0 0 1-2 2H7"/></svg>J’AIME</button></div>
+      <div class="empty"><span class="ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg></span><h3>Pas encore de publications/actualités !</h3><p>Pour publier quelque chose, touchez « Exprimez-vous ? » sur la page d’accueil.</p><button class="btn out" data-go="feed">Aller à la page d’accueil</button></div>
+    </div>
+  </div>
+  <div class="navbar"><nav class="navin" id="navin" aria-label="Navigation principale"></nav></div>
+  <div class="drawer" id="drawer" hidden><div class="scrim" id="scrim"></div><nav id="dnav" aria-label="Menu"></nav></div>
+</section>
+
+<section class="screen ov" id="ov" hidden style="z-index:25">
+  <div class="rule" aria-hidden="true"></div>
+  <div style="flex:1;overflow-y:auto;padding-bottom:96px" id="ovBody"></div>
+</section>
+
+<div class="sheet" id="sheet" hidden></div>
+<div id="toastBox" aria-live="polite"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const DATA={"cats":[["","Toutes",21],["harcelement","Harcèlement et intimidation",4],["intimite","Images intimes et chantage",3],["surveillance","Surveillance et contrôle",4],["comptes","Comptes, données et identité",4],["manipulation","Manipulation et arnaques",2],["haine","Haine et attaques de groupe",2],["technologie","Technologies et IA",2]],"edu":[{"slug":"deepfakes-et-manipulation-d-images-par-ia","img":"technologie","pin":true,"cat":"Technologies et IA","title":"Deepfakes et manipulation d’images par IA","sum":"Fausses vidéos ou images réalistes créées pour nuire ou humilier : ce qu’il faut savoir et comment réagir.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Un deepfake est une image, une vidéo ou un enregistrement audio créé ou modifié par intelligence artificielle pour faire dire ou faire quelque chose à une personne qui ne l’a jamais fait."],["h2","Les signes qui doivent alerter"],["ul",["Votre visage ou votre voix apparaît dans un contenu que vous n’avez jamais produit.","Des proches vous envoient une vidéo ou un message troublant.","Un chantage évoque une fausse image intime à votre sujet."]],["h2","Que faire ?"],["tip","À retenir Vous n’êtes pas responsable d’une image qu’une machine a fabriquée."]]},{"slug":"manipulation-psychologique-et-isolement-numerique","img":"manipulation","pin":true,"cat":"Manipulation et arnaques","title":"Manipulation psychologique et isolement numérique","sum":"Contrôle des communications, blocage de contacts, isolement : reconnaître l’emprise qui passe par le numérique.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","La manipulation psychologique en ligne passe par le contrôle de vos communications : surveiller vos conversations, choisir vos amis, bloquer vos contacts importants, vous faire douter de vous-même (« tu exagères », « personne ne te croira »)."],["h2","Les signes qui doivent alerter"],["ul",["On vous demande de supprimer ou de bloquer des proches.","Vous êtes accusé·e en permanence de mentir ou d’exagérer.","Vous avez peur de la réaction de l’autre quand vous êtes en ligne."]],["h2","Que faire ?"],["tip","À retenir Douter de soi est un effet de l’emprise, pas une preuve que vous avez tort."]]},{"slug":"surveillance-et-suivi-non-consentis","img":"surveillance","pin":true,"cat":"Surveillance et contrôle","title":"Surveillance et suivi non consentis","sum":"Logiciels espions, accès à vos messages, suivi GPS ou surveillance sur les réseaux : reconnaître le contrôle numérique et vous en protéger.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Surveiller le téléphone, les messages, la position ou l’activité en ligne d’une personne sans son accord est une forme de contrôle."],["h2","Les signes qui doivent alerter"],["ul",["Votre partenaire ou un proche sait des choses que vous ne lui avez jamais dites.","Votre batterie se vide vite, le téléphone chauffe ou se comporte de façon étrange.","On connaît vos déplacements en temps réel, ou on « arrive par hasard » où vous êtes."]],["h2","Que faire ?"],["tip","À retenir Si vous craignez une réaction violente, mettez votre sécurité avant la technique : retirer un espion peut alerter la personne qui l’a installé."]]},{"slug":"sextorsion","img":"intimite","pin":true,"cat":"Images intimes et chantage","title":"Sextorsion","sum":"Un chantage avec des images ou des vidéos intimes pour obtenir de l’argent, d’autres images ou de l’obéissance : réagir sans céder.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","La sextorsion est un chantage : une personne menace de diffuser des photos, des vidéos ou des conversations intimes pour obtenir de l’argent, d’autres contenus ou des faveurs."],["h2","Les signes qui doivent alerter"],["ul",["Une personne que vous ne connaissez pas bien devient très proche très vite.","On vous propose de passer en vidéo ou d’échanger des images intimes.","Après l’envoi, un message vous menace : « paie ou je publie »."]],["h2","Que faire ?"],["tip","À retenir Vous êtes victime d’une infraction, pas coupable d’avoir fait confiance. Plus tôt vous demandez de l’aide, plus il y a d’options."]]},{"slug":"harcelement-en-ligne","img":"harcelement","pin":true,"cat":"Harcèlement et intimidation","title":"Harcèlement en ligne","sum":"Messages répétés, insultes, intimidation ou menaces reçus sur les réseaux sociaux ou les messageries : comment le reconnaître et reprendre la main.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Le harcèlement en ligne, c’est subir de façon répétée des messages, commentaires ou publications qui insultent, rabaissent, intimident ou menacent, via les réseaux sociaux, les messageries ou les jeux en ligne."],["h2","Les signes qui doivent alerter"],["ul",["Des messages ou des appels qui arrivent à toute heure, même si vous avez demandé d’arrêter.","Des insultes, des moqueries ou des menaces visant votre corps, votre genre, votre orientation ou votre origine","Des comptes qui se multiplient pour vous contacter après un blocage."]],["h2","Que faire ?"],["tip","À retenir Vous n’avez pas à « supporter » : se déconnecter n’est pas une défaite, c’est une protection."]]},{"slug":"intelligence-artificielle-et-usages-malveillants","img":"technologie","pin":false,"cat":"Technologies et IA","title":"Intelligence artificielle et usages malveillants","sum":"Fausses images, automatisation du harcèlement, robots de conversation trompeurs : comprendre les risques de l’IA et s’en protéger.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","L’intelligence artificielle peut être détournée : créer de fausses images ou vidéos (deepfakes), imiter une voix, automatiser des messages de harcèlement à grande échelle ou manipuler des victimes avec des robots de conversation qui se font passer pour des per."],["h2","Les signes qui doivent alerter"],["ul",["Un « ami » en ligne répond très vite à toute heure, avec un discours trop parfait.","Des messages très ressemblants arrivent de nombreux comptes différents.","Une image ou une voix vous semble réaliste mais l’origine est introuvable."]],["h2","Que faire ?"],["tip","À retenir L’IA n’est ni bonne ni mauvaise en soi : ce sont certains usages qui sont dangereux. Un doute suffit pour prendre du recul."]]},{"slug":"refus-de-services-et-acces-bloques","img":"surveillance","pin":false,"cat":"Surveillance et contrôle","title":"Refus de services et accès bloqués","sum":"Couper votre accès à des comptes, outils ou services essentiels lors d’un conflit : reconnaître cette forme de contrôle.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Dans un conflit ou une relation de contrôle, certaines personnes bloquent l’accès à des comptes, à des outils ou à des services essentiels : téléphone, internet, comptes bancaires, messageries, documents numériques."],["h2","Les signes qui doivent alerter"],["ul",["Votre forfait ou votre connexion est coupé après une dispute.","On vous retire l’accès à vos comptes ou à des documents partagés.","Vous ne pouvez plus appeler vos proches sans autorisation."]],["h2","Que faire ?"],["tip","À retenir Garder un moyen de communication à soi est un geste de sécurité essentiel."]]},{"slug":"trolling-et-raids-numeriques","img":"haine","pin":false,"cat":"Haine et attaques de groupe","title":"Trolling et raids numériques","sum":"Attaques coordonnées par un groupe pour harceler massivement une personne : comprendre et protéger sa santé.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Un raid numérique est une attaque organisée : un groupe se coordonne pour inonder une personne de messages, de commentaires et de moqueries, souvent après un appel lancé dans un forum ou une conversation privée."],["h2","Les signes qui doivent alerter"],["ul",["Une vague soudaine de commentaires de comptes inconnus.","Des messages similaires, parfois avec le même vocabulaire ou les mêmes images.","Votre publication est relayée par des comptes qui vous attaquent."]],["h2","Que faire ?"],["tip","À retenir Un raid dure rarement longtemps : le plus important est de ne pas rester seul·e face aux messages."]]},{"slug":"forums-et-groupes-de-haine","img":"haine","pin":false,"cat":"Haine et attaques de groupe","title":"Forums et groupes de haine","sum":"Diffusion de propos sexistes, humiliants ou incitant à la violence dans des groupes ou forums : savoir réagir.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Certains groupes ou forums en ligne diffusent des propos sexistes, homophobes, transphobes, racistes ou humiliants, et encouragent parfois la violence ou le harcèlement de personnes ciblées. La logique de groupe peut banaliser la haine."],["h2","Les signes qui doivent alerter"],["ul",["Des publications qui rabaissent des personnes à cause de leur genre, orientation ou origine.","Des encouragements à harceler ou à « punir » quelqu’un.","Des partages de vos photos ou de vos informations dans ces espaces."]],["h2","Que faire ?"],["tip","À retenir Se retirer d’un espace toxique est un choix de santé, pas un abandon."]]},{"slug":"arnaques-sentimentales-et-financieres","img":"manipulation","pin":false,"cat":"Manipulation et arnaques","title":"Arnaques sentimentales et financières","sum":"Faux profils qui jouent sur les émotions pour obtenir de l’argent ou des informations : repérer les signaux d’alerte.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Une arnaque sentimentale commence par une relation en ligne qui semble idéale : attention constante, déclarations d’amour rapides, histoires touchantes. Puis arrivent les demandes d’argent, d’informations ou de photos."],["h2","Les signes qui doivent alerter"],["ul",["Le profil est très flatteur, les photos semblent « trop parfaites ».","La personne refuse systématiquement la vidéo ou une rencontre.","Elle traverse une urgence qui nécessite votre aide financière."]],["h2","Que faire ?"],["tip","À retenir Les arnaqueurs savent profiter de la solitude et de la confiance : ce n’est pas une honte d’avoir été touché·e."]]},{"slug":"sollicitation-sexuelle-via-les-technologies","img":"intimite","pin":false,"cat":"Images intimes et chantage","title":"Sollicitation sexuelle via les technologies","sum":"Demandes insistantes d’actes ou de conversations sexuelles en ligne : poser ses limites et se protéger.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Il s’agit de demandes répétées ou pressantes d’échanges, d’images ou d’actes sexuels via la messagerie, les réseaux sociaux, les jeux ou les applications de rencontre, particulièrement lorsqu’elles visent des personnes jeunes ou vulnérables."],["h2","Les signes qui doivent alerter"],["ul",["Une personne plus âgée ou inconnue oriente vite la conversation vers le sexe.","On vous demande de garder le secret ou de changer de plateforme.","Des cadeaux, de l’argent ou des promesses sont proposés en échange."]],["h2","Que faire ?"],["tip","À retenir Si la personne concernée est mineure, informez immédiatement un adulte de confiance et les autorités."]]},{"slug":"diffamation-en-ligne","img":"harcelement","pin":false,"cat":"Harcèlement et intimidation","title":"Diffamation en ligne","sum":"Répandre des mensonges pour détruire une réputation : distinguer critique et diffamation et défendre sa réputation.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","La diffamation en ligne, c’est diffuser publiquement des accusations fausses ou des rumeurs pour nuire à la réputation d’une personne : accusations inventées, montages, « captures » truquées, publications répétées dans des groupes."],["h2","Les signes qui doivent alerter"],["ul",["Une rumeur ou un mensonge à votre sujet circule sur les réseaux.","Des captures d’écran ou des images modifiées sont partagées.","Des proches prennent leurs distances à cause de ce qu’ils ont lu."]],["h2","Que faire ?"],["tip","À retenir Une critique n’est pas une diffamation : c’est le caractère faux et nuisible des accusations qui compte."]]},{"slug":"doxing-informations-personnelles-publiees","img":"comptes","pin":false,"cat":"Comptes, données et identité","title":"Doxing : informations personnelles publiées","sum":"Publication de votre adresse, de votre numéro ou de vos photos pour vous mettre en danger : réagir et réduire l’exposition.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Le doxing (ou « doxxing ») consiste à publier ou à diffuser des informations personnelles : adresse, numéro de téléphone, lieu de travail, photos, noms de proches. L’objectif est d’exposer la personne à du harcèlement ou à du danger."],["h2","Les signes qui doivent alerter"],["ul",["Des inconnus vous contactent avec des informations très précises sur vous.","Des visites ou des colis arrivent sans explication.","Votre adresse ou votre numéro circule dans des groupes."]],["h2","Que faire ?"],["tip","À retenir Si vous vous sentez en danger immédiat, mettez-vous d’abord en sécurité et appelez les secours de votre pays."]]},{"slug":"usurpation-et-vol-d-identite","img":"comptes","pin":false,"cat":"Comptes, données et identité","title":"Usurpation et vol d’identité","sum":"Quand quelqu’un utilise votre nom, vos photos ou vos données pour tromper, créer des comptes ou vous nuire.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","L’usurpation d’identité consiste à se faire passer pour vous (faux profil, faux messages). Le vol d’identité va plus loin : vos données personnelles servent à ouvrir des comptes, souscrire des services ou obtenir des avantages à votre nom."],["h2","Les signes qui doivent alerter"],["ul",["Des amis vous signalent un profil à votre nom ou avec vos photos.","Des courriers, des factures ou des demandes pour des services que vous n’avez pas souscrits.","Des messages envoyés « de votre part » qui vous mettent en difficulté."]],["h2","Que faire ?"],["tip","À retenir Plus vous agissez tôt, plus il est facile de limiter les dégâts."]]},{"slug":"forcer-le-partage-de-mots-de-passe","img":"comptes","pin":false,"cat":"Comptes, données et identité","title":"Forcer le partage de mots de passe","sum":"Exiger vos codes PIN, mots de passe ou accès à vos comptes : une pression qui n’a rien d’une preuve d’amour.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Dans certaines relations, on vous demande vos mots de passe « pour prouver votre fidélité » ou « parce que vous n’avez rien à cacher ». Exiger vos accès est une forme de contrôle qui porte atteinte à votre vie privée et peut préparer d’autres violences."],["h2","Les signes qui doivent alerter"],["ul",["On vous reproche de ne pas partager vos codes.","Votre téléphone est vérifié en votre absence.","Un refus provoque des colères, des menaces ou du chantage affectif."]],["h2","Que faire ?"],["tip","À retenir Aimer quelqu’un n’oblige pas à donner accès à son intimité numérique."]]},{"slug":"piratage-de-comptes-et-d-appareils","img":"comptes","pin":false,"cat":"Comptes, données et identité","title":"Piratage de comptes et d’appareils","sum":"Intrusion dans vos comptes, appareils ou données personnelles : reconnaître un piratage et reprendre le contrôle.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Le piratage est l’accès non autorisé à un compte (messagerie, réseaux sociaux, banque), à un appareil ou à des données. Il peut venir d’un inconnu, mais aussi d’un proche qui connaît vos habitudes ou vos mots de passe."],["h2","Les signes qui doivent alerter"],["ul",["Des messages envoyés depuis votre compte que vous n’avez pas écrits.","Des alertes de connexion depuis des lieux ou appareils inconnus.","Votre mot de passe ne fonctionne plus."]],["h2","Que faire ?"],["tip","À retenir Un bon mot de passe est long, unique pour chaque compte et jamais partagé."]]},{"slug":"controle-des-appareils-a-distance","img":"surveillance","pin":false,"cat":"Surveillance et contrôle","title":"Contrôle des appareils à distance","sum":"Prise de contrôle de la caméra, du micro ou d’objets connectés à distance : les signes et les gestes de protection.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Certains appareils (téléphone, ordinateur, caméra de maison, enceinte, télévision connectée) peuvent être pris en main à distance par une personne mal intentionnée, notamment si elle connaît vos mots de passe ou a un accès à votre réseau Wi-Fi."],["h2","Les signes qui doivent alerter"],["ul",["La caméra ou le micro s’allume sans raison.","Des réglages changent tout seuls : mots de passe, volume, lumières.","Quelqu’un évoque des conversations tenues chez vous."]],["h2","Que faire ?"],["tip","À retenir Quand vous doutez d’un appareil, ne parlez pas de vos projets devant lui."]]},{"slug":"traque-via-gps-ou-reseaux-sociaux","img":"surveillance","pin":false,"cat":"Surveillance et contrôle","title":"Traque via GPS ou réseaux sociaux","sum":"Être localisé·e ou rejoint·e sans l’avoir dit grâce au suivi numérique : comprendre et se protéger.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","La traque numérique consiste à suivre vos déplacements ou vos habitudes grâce au GPS d’un téléphone, d’une voiture, d’un traceur d’objets ou de publications sur les réseaux sociaux (photos géolocalisées, « check-in », stories)."],["h2","Les signes qui doivent alerter"],["ul",["Une personne apparaît régulièrement aux mêmes endroits que vous.","Vous retrouvez un petit boîtier ou un traceur dans un sac ou un véhicule.","Un compte commente chacune de vos publications, avec des détails sur vos lieux."]],["h2","Que faire ?"],["tip","À retenir Cacher ses lieux n’est pas de la paranoïa : c’est de la prudence."]]},{"slug":"revenge-porn-photos-privees-partagees","img":"intimite","pin":false,"cat":"Images intimes et chantage","title":"Revenge porn : photos privées partagées","sum":"Partager ou menacer de partager des images intimes pour humilier ou se venger, notamment après une rupture : comprendre et agir.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","On parle de « revenge porn » (pornographie de vengeance) quand une personne publie ou menace de publier des images ou des vidéos intimes d’un·e ex-partenaire, sans son accord, pour l’humilier ou la contrôler."],["h2","Les signes qui doivent alerter"],["ul",["Une menace de diffusion pendant ou après une rupture.","Des images qui circulent dans des groupes ou sur des sites sans votre accord.","Des proches ou des collègues qui vous en parlent."]],["h2","Que faire ?"],["tip","À retenir Le consentement à envoyer une image n’est pas un consentement à la diffuser."]]},{"slug":"messages-non-sollicites","img":"harcelement","pin":false,"cat":"Harcèlement et intimidation","title":"Messages non sollicités","sum":"Photos sexuelles, vidéos ou propos offensants envoyés sans votre accord : ce que c’est, pourquoi ce n’est jamais « normal » et comment réagir.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Recevoir une photo sexuelle, une vidéo ou des propos obscènes sans les avoir demandés est une forme de violence sexuelle en ligne. Elle peut venir d’un inconnu comme d’une personne que vous connaissez. L’absence de réponse de votre part n’est jamais un accord."],["h2","Les signes qui doivent alerter"],["ul",["Des images ou des vidéos explicites qui arrivent sans prévenir.","Des commentaires sexuels répétés sur votre corps ou votre apparence.","Une insistance après un refus : « allez, juste un peu »."]],["h2","Que faire ?"],["tip","À retenir Le refus se respecte dès le premier « non ». La honte appartient à celui ou celle qui a envoyé le message."]]},{"slug":"cyberharcelement-et-pollupostage","img":"harcelement","pin":false,"cat":"Harcèlement et intimidation","title":"Cyberharcèlement et pollupostage","sum":"Attaques répétées ou massives visant à vous intimider, vous insulter ou envahir votre espace numérique de messages.","meta":"Tout public · 2 min de lecture","body":[["h2","De quoi parle-t-on ?"],["p","Le cyberharcèlement regroupe des attaques répétées en ligne."],["h2","Les signes qui doivent alerter"],["ul",["Des dizaines de notifications ou de messages en quelques minutes.","Votre boîte mail ou vos commentaires saturés de contenus agressifs ou humiliants.","Des inscriptions à votre insu à des listes ou des services."]],["h2","Que faire ?"],["tip","À retenir Vous pouvez mettre vos comptes en pause : l’urgence est de vous préserver, pas de répondre."]]}],"bds":[{"slug":"harcelement-en-ligne-quand-les-messages-ne-s-arretent-plus","cat":"Harcèlement et intimidation Avec bulles de conversation","title":"Quand les messages ne s’arrêtent plus","sum":"Amina reçoit des messages d’insultes sans arrêt. Cinq cases pour voir comment garder des preuves, bloquer, signaler et demander du soutien.","meta":"Lire en 2 minutes","conv":true,"cases":"5 cases","panels":[{"alt":"Amina, assise sur un canapé la nuit, regarde son téléphone avec inquiétude tandis qu’une nuée de bulles de messages orange et rouges en jaillit.","bub":[{"type":"pense","text":"Pourquoi autant de messages ? Qui m’écrit ça ?","color":"violet","emotion":"","x":27,"y":14,"tail":"b","who":"Amina"},{"type":"dit","text":"Tu es nulle. Personne ne t’aime.","color":"rouge","emotion":"","x":74,"y":78,"tail":"t","who":"Comptes anonymes"},{"type":"ressent","text":"J’ai peur et je ne comprends pas.","color":"violet","emotion":"peur","x":26,"y":84,"tail":"t","who":"Amina"}],"cap":"1 Les notifications s’enchaînent : insultes, moqueries, menaces.","say":"« Encore un message… »","img":"assets/bd1-1.webp"},{"alt":"Amina, allongée dans son lit la nuit, les yeux fatigués, hésite à reprendre son téléphone posé face contre la table de chevet.","bub":[{"type":"pense","text":"Je n’ose plus regarder mon téléphone.","color":"orange","emotion":"","x":27,"y":14,"tail":"br","who":"Amina"},{"type":"ressent","text":"Je suis épuisée et inquiète. Ce n’est pas de la faiblesse.","color":"orange","emotion":"malaise","x":72,"y":80,"tail":"t","who":"Amina"}],"cap":"2 Amina se sent fatiguée et inquiète.","say":"« Je n’ose plus regarder mon téléphone. »"},{"alt":"Amina, à son bureau en plein jour, fait calmement des captures d’écran de ses messages ; un ordinateur, un carnet et un dossier sont posés devant elle","bub":[{"type":"dit","text":"Je garde tout, au cas où.","color":"vert","emotion":"","x":24,"y":13,"tail":"br","who":"Amina"},{"type":"pense","text":"Les dates et les noms des comptes doivent être visibles.","color":"jaune","emotion":"","x":73,"y":14,"tail":"bl","who":"Amina"},{"type":"ressent","text":"Je reprends un peu la main.","color":"vert","emotion":"confiance","x":26,"y":85,"tail":"t","who":"Amina"}],"cap":"3 Elle fait des captures d’écran avec la date et le nom des comptes.","say":"« Je garde tout, au cas où. »"},{"alt":"Amina tient son téléphone dont l’écran affiche un symbole d’interdiction et respire profondément, les yeux fermés.","bub":[{"type":"dit","text":"Bloquer, signaler… et respirer.","color":"vert","emotion":"","x":22,"y":84,"tail":"t","who":"Amina"},{"type":"ressent","text":"Je respire. C’est fini pour ce soir.","color":"vert","emotion":"calme","x":76,"y":84,"tail":"t","who":"Amina"}],"cap":"4 Elle bloque les comptes et les signale à la plateforme.","say":"« Bloquer, signaler… et respirer. »"},{"alt":"Amina et son amie Esther sont assises côte à côte sur un canapé ; Esther passe un bras autour de ses épaules, un ordinateur affiche un bouclier.","bub":[{"type":"dit","text":"Je suis là. Tu n’as rien fait de mal.","color":"vert","emotion":"","x":76,"y":12,"tail":"bl","who":"Esther"},{"type":"dit","text":"Merci. Je vais créer une alerte.","color":"vert","emotion":"","x":24,"y":82,"tail":"t","who":"Amina"},{"type":"ressent","text":"Je ne suis plus seule.","color":"vert","emotion":"calme","x":25,"y":12,"tail":"b","who":"Amina"}],"cap":"5 Amina en parle à son amie Esther et à l’équipe GANXÔ.","say":"Esther : « Je suis là. Tu n’as rien fait de mal. »"}]},{"slug":"le-faux-profil-arnaque-sentimentale","cat":"Manipulation et arnaques Avec bulles de conversation","title":"Le faux profil","sum":"Yao rencontre quelqu’un en ligne qui lui demande bientôt de l’argent. Cinq cases pour repérer les signaux d’une arnaque sentimentale.","meta":"Lire en 2 minutes","conv":true,"cases":"5 cases","panels":[{"alt":"Yao, flatté, regarde son téléphone ; à droite flotte la carte d’un profil séduisant entourée de petits cœurs.","bub":[{"type":"dit","text":"Bonjour, ton sourire m’a tout de suite touché.","color":"jaune","emotion":"","x":72,"y":14,"tail":"b","who":"Profil inconnu"},{"type":"ressent","text":"Je suis flatté.","color":"vert","emotion":"confiance","x":28,"y":14,"tail":"b","who":"Yao"}],"cap":"1 Un profil très séduisant lui écrit.","say":"« Bonjour, ton sourire m’a tout de suite touché. »","img":"assets/bd4-1.webp"},{"alt":"Yao, allongé sur son lit avec son téléphone, rêveur ; des cœurs et des bulles de messages en jaillissent à toute vitesse.","bub":[{"type":"dit","text":"Je n’ai jamais ressenti ça. Je t’aime déjà.","color":"jaune","emotion":"","x":72,"y":14,"tail":"b","who":"Profil inconnu"},{"type":"pense","text":"C’est très rapide… mais c’est agréable.","color":"jaune","emotion":"","x":28,"y":14,"tail":"b","who":"Yao"}],"cap":"2 Les déclarations d’amour arrivent en quelques jours.","say":"« Je n’ai jamais ressenti ça. »"},{"alt":"Yao, inquiet, regarde son téléphone ; une bulle orange d’urgence laisse échapper des pièces et un billet, avec une horloge.","bub":[{"type":"dit","text":"J’ai un problème. Tu peux m’envoyer de l’argent ?","color":"orange","emotion":"","x":72,"y":14,"tail":"b","who":"Profil inconnu"},{"type":"pense","text":"Pourquoi tout est si urgent ?","color":"jaune","emotion":"","x":28,"y":14,"tail":"b","who":"Yao"},{"type":"ressent","text":"Quelque chose cloche.","color":"orange","emotion":"malaise","x":72,"y":85,"tail":"t","who":"Yao"}],"cap":"3 Puis vient la demande d’argent, en urgence.","say":"« J’ai un problème. Tu peux m’envoyer de l’argent ? »"},{"alt":"Yao, la main sur le menton, doute devant son ordinateur ; une grande loupe examine deux photos identiques et un point d’interrogation flotte.","bub":[{"type":"pense","text":"Et si ce n’était pas vrai ?","color":"jaune","emotion":"","x":28,"y":14,"tail":"b","who":"Yao"},{"type":"dit","text":"Je vérifie ses photos et je demande une vidéo.","color":"vert","emotion":"","x":72,"y":82,"tail":"t","who":"Yao"}],"cap":"4 Yao doute et vérifie les photos et l’histoire.","say":"« Et si ce n’était pas vrai ? »"},{"alt":"Yao, soulagé, parle avec un proche qui lui pose la main sur l’épaule ; un téléphone affiche un profil bloqué et un petit bouclier vert flotte entre eu","bub":[{"type":"dit","text":"Je ne paie pas. Merci de m’avoir écouté.","color":"vert","emotion":"","x":27,"y":14,"tail":"b","who":"Yao"},{"type":"dit","text":"Tu n’as rien fait de mal. On va t’aider.","color":"vert","emotion":"","x":73,"y":14,"tail":"b","who":"Un proche"},{"type":"ressent","text":"Je me sens soutenu.","color":"vert","emotion":"calme","x":50,"y":85,"tail":"t","who":"Yao"}],"cap":"5 Il arrête, bloque le profil et en parle à une personne de confiance.","say":"« Je ne paie pas. Merci de m’avoir écouté. »"}]},{"slug":"qui-regarde-par-dessus-mon-epaule-surveillance","cat":"Surveillance et contrôle Avec bulles de conversation","title":"Qui regarde par-dessus mon épaule ?","sum":"Lina remarque que son partenaire sait tout ce qu’elle fait. Cinq cases sur la surveillance numérique et la façon de reprendre le contrôle.","meta":"Lire en 2 minutes","conv":true,"cases":"5 cases","panels":[{"alt":"Lina, dans son salon à la tombée de la nuit, tient son téléphone d’un air surpris et inquiet ; à droite flottent un grand œil et une épingle de locali","bub":[{"type":"dit","text":"Comment tu sais que j’étais là ?","color":"jaune","emotion":"","x":30,"y":14,"tail":"b","who":"Lina"},{"type":"pense","text":"Il sait tout ce que je fais. Ce n’est pas normal.","color":"orange","emotion":"","x":73,"y":56,"tail":"l","who":"Lina"},{"type":"ressent","text":"Je me sens surveillée.","color":"orange","emotion":"malaise","x":73,"y":86,"tail":"l","who":"Lina"}],"cap":"1 Il sait toujours où elle est, ce qu’elle dit, avec qui.","say":"« Comment tu sais que j’étais là ? »","img":"assets/bd3-1.webp"},{"alt":"Lina, assise dans sa chambre, regarde son téléphone qui chauffe, avec une batterie presque vide et un triangle d’avertissement ; une loupe discrète es","bub":[{"type":"pense","text":"Mon téléphone chauffe et la batterie se vide…","color":"jaune","emotion":"","x":30,"y":14,"tail":"b","who":"Lina"},{"type":"ressent","text":"Il y a peut-être un logiciel espion.","color":"jaune","emotion":"doute","x":73,"y":86,"tail":"t","who":"Lina"}],"cap":"2 Son téléphone chauffe, la batterie se vide.","say":"« Pourquoi il se comporte bizarrement ? »"},{"alt":"Lina et son amie aux cheveux courts teints en turquoise discutent à voix basse à la table d’un café ; entre elles, un autre téléphone affiche un caden","bub":[{"type":"dit","text":"Je préfère que tu m’aides depuis ton téléphone.","color":"vert","emotion":"","x":26,"y":14,"tail":"b","who":"Lina"},{"type":"dit","text":"D’accord. On regarde ensemble.","color":"vert","emotion":"","x":75,"y":14,"tail":"b","who":"Son amie"},{"type":"ressent","text":"Je choisis un appareil sûr.","color":"jaune","emotion":"prudence","x":50,"y":85,"tail":"t","who":"Lina"}],"cap":"3 Elle n’en parle pas à son partenaire, mais à une amie, depuis un autre téléphone.","say":"« Je préfère que tu m’aides depuis ton téléphone. »"},{"alt":"Lina et son amie, côte à côte sur un canapé, regardent un téléphone ; un grand écran illustré montre des réglages désactivés, une position barrée et u","bub":[{"type":"dit","text":"Voyons ce qui est installé.","color":"vert","emotion":"","x":28,"y":14,"tail":"b","who":"Lina"},{"type":"pense","text":"Je coupe le partage de position et je change mes mots de passe.","color":"jaune","emotion":"","x":73,"y":14,"tail":"b","who":"Lina"},{"type":"ressent","text":"Je reprends du contrôle.","color":"vert","emotion":"confiance","x":73,"y":86,"tail":"t","who":"Lina"}],"cap":"4 Elles vérifient les applications, les accès et les partages de position.","say":"« Voyons ce qui est installé. »"},{"alt":"Lina sourit avec soulagement devant un grand bouclier vert orné d’un cœur ; un carnet avec un plan en étapes est posé sur le bureau.","bub":[{"type":"dit","text":"Je veux faire ça en sécurité.","color":"vert","emotion":"","x":28,"y":14,"tail":"b","who":"Lina"},{"type":"ressent","text":"Je ne suis plus seule.","color":"vert","emotion":"calme","x":73,"y":14,"tail":"b","who":"Lina"},{"type":"pense","text":"Avançons pas à pas, avec prudence.","color":"jaune","emotion":"","x":73,"y":84,"tail":"t","who":"Lina"}],"cap":"5 Lina prépare un plan de sécurité avec l’équipe GANXÔ.","say":"« Je veux faire ça en sécurité. »"}]},{"slug":"une-photo-un-chantage-sextorsion","cat":"Images intimes et chantage Avec bulles de conversation","title":"Une photo, un chantage","sum":"Karim est menacé après avoir envoyé une photo. Cinq cases pour comprendre pourquoi il ne faut pas payer et comment demander de l’aide.","meta":"Lire en 2 minutes","conv":true,"cases":"5 cases","panels":[{"alt":"Karim discute avec un profil très flatteur. Tout va vite : compliments, secrets, demandes d’images.","bub":[{"type":"dit","text":"Tu es unique. Fais-moi confiance…","color":"jaune","emotion":"","x":72,"y":14,"tail":"b","who":"Profil inconnu"},{"type":"ressent","text":"Je me sens flatté et spécial.","color":"vert","emotion":"confiance","x":28,"y":14,"tail":"b","who":"Karim"}],"cap":"1 Une nouvelle personne devient très proche, très vite.","say":"« Tu es unique. Fais-moi confiance… »","img":"assets/bd2-1.webp"},{"alt":"Après l’envoi, un malaise s’installe. Karim a eu confiance : ce n’est pas une faute.","bub":[{"type":"pense","text":"Je n’aurais pas dû…","color":"bleu","emotion":"","x":28,"y":14,"tail":"b","who":"Karim"},{"type":"ressent","text":"J’ai honte et je regrette.","color":"violet","emotion":"honte","x":72,"y":16,"tail":"bl","who":"Karim"}],"cap":"2 Il envoie une photo intime, puis regrette aussitôt.","say":"« Je n’aurais pas dû… »"},{"alt":"Le chantage commence. La peur et la honte poussent à obéir, mais payer ne garantit jamais que cela s’arrête.","bub":[{"type":"dit","text":"Paie, ou tout le monde la verra.","color":"rouge","emotion":"","x":72,"y":15,"tail":"b","who":"Message anonyme"},{"type":"ressent","text":"J’ai peur. Je me sens piégé.","color":"violet","emotion":"peur","x":28,"y":14,"tail":"b","who":"Karim"}],"cap":"3 Le message arrive : « Paie ou je publie. »","say":"« Paie, ou tout le monde la verra. »"},{"alt":"Il fait des captures du chantage, ne répond plus et bloque le compte. Il signale le profil à la plateforme.","bub":[{"type":"dit","text":"Je ne cède pas. Je garde les preuves.","color":"vert","emotion":"","x":28,"y":14,"tail":"b","who":"Karim"},{"type":"ressent","text":"Je reprends le contrôle.","color":"vert","emotion":"calme","x":72,"y":15,"tail":"b","who":"Karim"}],"cap":"4 Karim ne paie pas, garde des preuves et bloque.","say":"« Je ne cède pas. Je garde les preuves. »"},{"alt":"Karim n’est pas seul. Il est écouté, rassuré et orienté vers les bonnes démarches.","bub":[{"type":"dit","text":"On va gérer ça ensemble.","color":"vert","emotion":"","x":73,"y":14,"tail":"b","who":"Sa cousine"},{"type":"ressent","text":"Je ne suis plus seul.","color":"vert","emotion":"confiance","x":27,"y":14,"tail":"b","who":"Karim"}],"cap":"5 Il en parle à une personne de confiance et crée une alerte.","say":"Sa cousine : « On va gérer ça ensemble. »"}]}]};
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---- thème (clair / nuit) ---- */
+function setTheme(d){document.documentElement.dataset.bg=d?"dark":"default";store.set("gnx-theme",d?"dark":"light");const sw=$('[data-pref=dark]');if(sw)sw.setAttribute("aria-checked",d);
+  $$("img.logo").forEach(i=>i.src=d?"assets/logo-blanc.png":"assets/logo-couleur.png");}
+const isDark=()=>document.documentElement.dataset.bg==="dark";
+setTheme((store.get("gnx-theme")||"light")==="dark");
+
+/* ---- toast / feuille ---- */
+let tt;function toast(m){const b=$("#toastBox");b.innerHTML='<div class="toast" role="status">'+esc(m)+'</div>';clearTimeout(tt);tt=setTimeout(()=>b.innerHTML="",3200);$("#phone").appendChild(b);}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-toast]");if(t){e.preventDefault();toast(t.dataset.toast);}const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);}});
+let lastFocus;
+function sheet(html,after){const s=$("#sheet");lastFocus=document.activeElement;s.innerHTML='<div class="in" role="dialog" aria-modal="true"><div class="grip" aria-hidden="true"></div>'+html+'</div>';s.hidden=false;const f=$("h3",s);if(f){f.tabIndex=-1;f.focus();}
+  s.onclick=e=>{if(e.target===s)closeSheet()};$$("[data-close]",s).forEach(b=>b.onclick=closeSheet);if(after)after(s);}
+function closeSheet(){const s=$("#sheet");s.hidden=true;s.innerHTML="";if(lastFocus&&lastFocus.focus)lastFocus.focus();}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("#sheet").hidden)closeSheet();else if(!$("#drawer").hidden)drawer(false);else if(!$("#ov").hidden)closeOv();}});
+
+/* ---- écrans ---- */
+const screens=["splash","onb","auth","app"];
+function showScreen(id){screens.forEach(s=>{$("#"+s).hidden=s!==id;});if(id==="onb")$("#next").focus({preventScroll:true});}
+setTimeout(()=>showScreen("onb"),2400);
+
+/* ---- carrousel ---- */
+const N=4;let idx=0;const track=$("#track"),vp=$("#vp"),dots=$("#dots"),slides=$$(".slide",track);
+for(let i=0;i<N;i++){const b=document.createElement("button");b.className="dot";b.innerHTML="<i></i>";b.setAttribute("aria-label","Diapositive "+(i+1)+" sur "+N);b.onclick=()=>show(i);dots.appendChild(b);}
+function show(i){idx=Math.max(0,Math.min(N-1,i));track.style.transform="translateX(-"+idx*100+"%)";$$(".dot",dots).forEach((d,k)=>d.setAttribute("aria-current",k===idx));slides.forEach((s,k)=>s.setAttribute("aria-hidden",k!==idx));
+  $("#next").textContent=idx===N-1?"Commencer":"Suivant";$("#skip").hidden=idx===N-1;$("#live").textContent="Diapositive "+(idx+1)+" sur "+N+" : "+$("h2",slides[idx]).textContent;}
+show(0);$("#live").textContent="";
+$("#next").onclick=()=>idx<N-1?show(idx+1):toAuth();$("#skip").onclick=toAuth;
+function toAuth(){showScreen("auth");}
+$("#onb").addEventListener("keydown",e=>{if(e.key==="ArrowRight")show(idx+1);if(e.key==="ArrowLeft")show(idx-1);});
+let sx=null,dx=0;
+vp.addEventListener("pointerdown",e=>{sx=e.clientX;dx=0;track.classList.add("drag");vp.setPointerCapture(e.pointerId);});
+vp.addEventListener("pointermove",e=>{if(sx===null)return;dx=e.clientX-sx;track.style.transform="translateX("+(-idx*vp.offsetWidth+dx)+"px)";});
+const end=()=>{if(sx===null)return;track.classList.remove("drag");const d=dx;sx=null;if(d<-50)show(idx+1);else if(d>50)show(idx-1);else show(idx);};
+vp.addEventListener("pointerup",end);vp.addEventListener("pointercancel",end);
+
+/* ---- page invité ---- */
+const tabIn=$("#tab-in"),tabUp=$("#tab-up");
+function authTab(up){tabIn.setAttribute("aria-selected",!up);tabUp.setAttribute("aria-selected",up);tabIn.tabIndex=up?-1:0;tabUp.tabIndex=up?0:-1;$("#p-in").hidden=up;$("#p-up").hidden=!up;}
+tabIn.onclick=()=>authTab(false);tabUp.onclick=()=>authTab(true);
+$("#auth").addEventListener("keydown",e=>{if(e.target.getAttribute&&e.target.getAttribute("role")==="tab"&&(e.key==="ArrowRight"||e.key==="ArrowLeft")){const up=e.key==="ArrowRight";authTab(up);(up?tabUp:tabIn).focus();}});
+$$("[data-show]").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.show);const h=i.type==="password";i.type=h?"text":"password";b.textContent=h?"Masquer":"Afficher";});
+$("#cookieOk").onclick=()=>{$("#cookie").hidden=true;store.set("gnx-cookie","1");};
+$("#p-in").onsubmit=e=>{e.preventDefault();if(!$("#in-id").value.trim()||!$("#in-pw").value){$("#in-err").textContent="Renseignez votre pseudo (ou e-mail) et votre mot de passe.";return;}$("#in-err").textContent="";enter("feed");};
+$("#p-up").onsubmit=e=>{e.preventDefault();const er=$("#up-err");
+  if(!$("#up-ps").value.trim()){er.textContent="Choisissez un nom d’utilisateur.";return;}
+  if($("#up-pw").value.length<6||$("#up-pw").value.length>20){er.textContent="Le mot de passe doit contenir de 6 à 20 caractères.";return;}
+  if($("#up-pw").value!==$("#up-pw2").value){er.textContent="Les deux mots de passe ne correspondent pas.";return;}
+  if(!$("#up-age").checked){er.textContent="Acceptez les conditions pour continuer.";return;}
+  er.textContent="";enter("feed");};
+$("#guestAlert").onclick=()=>enter("alert");
+
+/* ---- navigation ---- */
+const I={
+dots:'<circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>',
+feed:'<path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5zM8 12v1.8h8V12zm0 4v1.8h8V16z"/>',
+hash:'<path d="M9.4 3L8.8 7H5v2h3.5l-.6 4H4v2h3.6l-.6 4h2l.6-4h4l-.6 4h2l.6-4H20v-2h-3.4l.6-4H21V7h-3.5l.6-4h-2l-.6 4h-4l.6-4zm.1 6h4l-.6 4h-4z"/>',
+bell:'<path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zm7-6.5V11a7 7 0 0 0-5-6.7V3.5a2 2 0 0 0-4 0v.8A7 7 0 0 0 5 11v4.5L3 17.5V19h18v-1.5zm-2 1.5H7v-6a5 5 0 0 1 10 0z"/>',
+msg:'<path d="M20 2H8a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v10l3.5-3H16a2 2 0 0 0 2-2v-1l4 3.5V4a2 2 0 0 0-2-2zM16 14H5.2L4 15.1V8h12zm4-2.4-2-1.7V6h-9V4h11z"/>',
+bm:'<path d="M6 3h12v18l-6-4-6 4z"/>',school:'<path d="M12 3L1 9l11 6 9-4.9V17h2V9zM5 13.2v4L12 21l7-3.8v-4L12 17z"/>',bd:'<path d="M3 5h8v14H3zm10 0h8v14h-8zm-8 2v10h4V7zm10 0v10h4V7z"/>',
+alertic:'<path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-7 11h-2V7h2zm0 4h-2v-2h2z"/>',
+flame:'<path d="M13 2s1 4-2 6-3 4-1 6c-3-1-4-4-3-7C5 9 4 12 4 14a8 8 0 0 0 16 0c0-5-4-7-7-12z"/>'};
+const svg=p=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>';
+const nav=[["dots","Menu","…"],["feed","Fil d’actualité"],["explore","Explorer"],["notif","Notifications"],["msg","Messages"]];
+const navIc={dots:I.dots,feed:I.feed,explore:I.hash,notif:I.bell,msg:I.msg};
+$("#navin").innerHTML=nav.map(([k,l])=>'<button data-n="'+k+'" aria-label="'+l+'">'+svg(navIc[k])+'</button>').join("");
+$("#navin").onclick=e=>{const b=e.target.closest("[data-n]");if(!b)return;const k=b.dataset.n;if(k==="dots")drawer(true);else go(k);};
+const views=["feed","edu","bd","alert","explore","notif","msg","prof"];
+function go(k){if(!$("#app").hidden&&!$("#drawer").hidden)drawer(false);if(!$("#ov").hidden)closeOv();if($("#app").hidden)showScreen("app");
+  views.forEach(v=>{$("#v-"+v).hidden=v!==k;});$$("[data-n]").forEach(b=>b.classList.toggle("active",b.dataset.n===k));
+  $("#v-"+k).scrollTop=0;if(k==="alert"&&!A.started)startChat();$("#v-"+k).setAttribute("tabindex","-1");}
+function enter(k){showScreen("app");go(k);}
+const menu=[["feed","feed","Fil d’actualité"],["notif","bell","Notifications"],["explore","flame","Thématiques"],["explore","hash","Explorer"],["msg","msg","Messages"],["fav","bm","Favoris"],["alert","alertic","Créer une alerte VBG"],["edu","school","Contenus éducatifs"],["bd","bd","Bandes dessinées"]];
+function cur(){return views.find(v=>!$("#v-"+v).hidden)}
+function drawer(open){const d=$("#drawer");d.hidden=!open;if(open){const c=cur();
+  $("#dnav").innerHTML='<button class="dwho" data-m="prof"><span class="av s40 def" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span>Aube Claire</button>'+
+  menu.map(([k,i,l])=>'<button class="dit'+(k===c&&l!=="Thématiques"?' active':'')+'" data-m="'+k+'">'+svg(I[i])+l+'</button>').join("")+
+  '<div class="dsep"></div><button class="dit" data-m="night">'+svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')+(isDark()?"Mode clair":"Mode nuit")+'</button><div class="dsep"></div>'+
+  '<div class="dfoot"><span>Conditions d’utilisation</span><span>Politique de confidentialité</span><span>Gestion des cookies</span><span>À propos de nous</span><span>Boîte à suggestions</span><span>Centre d’aide</span></div><div class="dfoot"><span>© GANXÔ FORUM - 2026</span></div>'+
+  '<button class="dit logout" data-m="out">Se déconnecter</button>';
+  $$("[data-m]",$("#dnav")).forEach(b=>b.onclick=()=>{const m=b.dataset.m;if(m==="fav"){drawer(false);toast("Favoris : non inclus dans la maquette.");}else if(m==="night"){setTheme(!isDark());drawer(false);}else if(m==="out"){drawer(false);showScreen("auth");}else go(m);});
+  $("#dnav .dit, #dnav .dwho").focus();}}
+$("#scrim").onclick=()=>drawer(false);
+
+/* ---- fil ---- */
+const people=[["Lumière","#5B2BB8"],["Cap_Sud","#0B6B54"],["Étoile","#B33A00"],["Baobab","#2B33C9"],["Rivage","#17703A"]];
+$("#stories").innerHTML='<button class="st" data-story="la tienne" aria-label="Ma story : ajouter"><span class="ring mine"><span style="background:#C8200E"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span><span class="plus" aria-hidden="true">+</span></span><small>Ma story</small></button>'+people.map(([n,c])=>'<button class="st" data-story="'+esc(n)+'" aria-label="Histoire de '+esc(n)+'"><span class="ring"><span style="background:'+c+'">'+esc(n[0])+'</span></span><small>'+esc(n)+'</small></button>').join("");
+$$("[data-story]").forEach(b=>b.onclick=()=>sheet('<h3>'+(b.dataset.story==="la tienne"?"Ma story":"Histoire de "+esc(b.dataset.story))+'</h3><p>Dans l’application, les histoires disparaissent après 24 heures. Ici, contenu fictif.</p><button class="btn block" data-close style="margin-top:16px">Fermer</button>'));
+const posts=[
+ {n:"Lumière",h:"@lumiere_s",c:"#5B2BB8",t:"14 novembre, 09:12",x:"Aujourd’hui j’ai osé en parler à une amie. Elle m’a écouté·e sans me juger. Merci à ce forum de m’avoir donné le courage. 🌈",r:4,m:3},
+ {n:"Cap_Sud",h:"@cap_sud",c:"#0B6B54",t:"13 novembre, 18:40",x:"Astuce : activez la double vérification sur tous vos comptes, et changez le code de verrouillage de votre téléphone régulièrement.",r:9,m:2},
+ {n:"Baobab",h:"@baobab_b",c:"#2B33C9",t:"12 novembre, 21:05",x:"Est-ce que quelqu’un connaît une façon douce d’annoncer à sa famille qui on est ? Je cherche des idées, à mon rythme.",r:6,m:8}];
+const ic={cm:'<path d="M21 12a8 8 0 0 1-11.5 7.2L3 21l1.8-5.5A8 8 0 1 1 21 12z"/>',em:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',rp:'<path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/>',sh:'<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',mo:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>'};
+const s2=p=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>';
+function renderPosts(){$("#posts").innerHTML=posts.map((p,i)=>'<article class="post"><span class="av s40" style="background:'+p.c+'" aria-hidden="true">'+esc(p.n[0])+'</span><div class="main"><div class="top"><div><span class="nm">'+esc(p.n)+'</span> <span class="hl">'+esc(p.h)+'</span></div><span class="dt">'+esc(p.t)+'</span></div><p class="tx">'+esc(p.x)+'</p><div class="pa"><button data-cm aria-label="Commentaires : '+p.m+'">'+s2(ic.cm)+p.m+'</button><button data-re="'+i+'" aria-pressed="false" aria-label="Réagir : '+p.r+'">'+s2(ic.em)+'<span>'+p.r+'</span></button><button data-rp aria-label="Repartager">'+s2(ic.rp)+'0</button><button data-sh aria-label="Partager">'+s2(ic.sh)+'</button><button data-mo aria-label="Plus d’options">'+s2(ic.mo)+'</button></div></div></article>').join("");
+  $$("[data-re]").forEach(b=>b.onclick=()=>{const p=posts[b.dataset.re],on=b.getAttribute("aria-pressed")!=="true";b.setAttribute("aria-pressed",on);$("span",b).textContent=p.r+(on?1:0);});
+  $$("[data-cm]").forEach(b=>b.onclick=()=>toast("Les réponses s’ouvriraient ici (simulé)."));$$("[data-rp],[data-sh],[data-mo]").forEach(b=>b.onclick=()=>toast("Action simulée."));}
+renderPosts();
+function composer(){sheet('<h3>Nouvelle publication</h3><div class="fld"><label for="np" class="vh">Votre message</label><textarea class="fc" id="np" rows="5" maxlength="280" placeholder="Bonjour Aube, Exprimez-vous ?"></textarea><span style="font-size:12px;color:var(--cl-tx2)"><span id="npc">0</span>/280 · publié sous votre pseudonyme</span></div><div class="err" id="nperr" role="alert"></div><div style="display:grid;gap:8px;margin-top:8px"><button class="btn" id="npok">Publier</button><button class="btn out" data-close>Annuler</button></div>',s=>{
+  $("#np",s).focus();$("#np",s).oninput=e=>$("#npc",s).textContent=e.target.value.length;
+  $("#npok",s).onclick=()=>{const v=$("#np",s).value.trim();if(!v){$("#nperr",s).textContent="Écrivez quelques mots avant de publier.";return;}
+    posts.unshift({n:"Aube Claire",h:"@aube_claire",c:"#C8200E",t:"à l’instant",x:v,r:0,m:0});renderPosts();closeSheet();$("#v-feed").scrollTop=330;toast("Publié (simulé).");};});}
+$("#openComposer").onclick=composer;$("#openComposer2").onclick=composer;
+
+/* ---- éducation ---- */
+let eduF="";
+function renderEdu(){$("#eduCats").innerHTML=DATA.cats.map(([k,n,c])=>'<button class="chipl" aria-pressed="'+(k===eduF)+'" data-f="'+k+'">'+esc(n)+' <span>'+c+'</span></button>').join("");
+  $("#eduGrid").innerHTML=DATA.edu.filter(e=>!eduF||e.img===eduF).map(e=>'<li><button class="ecard" data-e="'+e.slug+'"><span class="eimg '+e.img+'">'+(e.pin?'<b class="pin">À la une</b>':'')+'</span><span class="ebody"><span class="ecat">'+esc(e.cat)+'</span><span class="etitle">'+esc(e.title)+'</span><span class="esum">'+esc(e.sum)+'</span><span class="emeta">'+esc(e.meta)+'</span></span></button></li>').join("");}
+$("#eduCats").onclick=e=>{const c=e.target.closest("[data-f]");if(c){eduF=c.dataset.f;renderEdu();$$("#eduCats [data-f]").find(x=>x.dataset.f===eduF).focus();}};
+$("#eduGrid").onclick=e=>{const c=e.target.closest("[data-e]");if(c)openDoc(c.dataset.e);};
+renderEdu();
+function ovOpen(html,title){$("#ovBody").innerHTML='<header class="hdr"><h1>'+esc(title)+'</h1><img class="logo" src="assets/logo-'+(isDark()?"blanc":"couleur")+'.png" alt="GANXÔ"></header>'+html;$("#ov").hidden=false;$("#ovBody").scrollTop=0;const b=$(".back2",$("#ovBody"));if(b)b.focus();$$(".back2",$("#ovBody")).forEach(x=>x.onclick=closeOv);}
+function closeOv(){$("#ov").hidden=true;$("#ovBody").innerHTML="";}
+function blocks(b){return b.map(([t,v])=>t==="h2"?'<h2>'+esc(v)+'</h2>':t==="p"?'<p>'+esc(v)+'</p>':t==="ul"||t==="ol"?'<'+t+'>'+v.map(x=>'<li>'+esc(x)+'</li>').join("")+'</'+t+'>':t==="blockquote"?'<blockquote><p>'+esc(v)+'</p></blockquote>':'<div class="callout"><b>À retenir</b><p>'+esc(v.replace(/^À retenir\s*/,""))+'</p></div>').join("");}
+function openDoc(slug){const e=DATA.edu.find(x=>x.slug===slug);
+  ovOpen('<article class="doc"><button class="back2">← Tous les contenus éducatifs</button><br><span class="ecat">'+esc(e.cat)+'</span><h1>'+esc(e.title)+'</h1><p class="sum">'+esc(e.sum)+'</p><p class="emeta">'+esc(e.meta)+'</p><div class="dbody" style="margin-top:12px">'+blocks(e.body)+'</div><div class="ehelp" style="margin:20px 0 0"><div><b>Besoin d’en parler ?</b><span>L’équipe GANXÔ vous écoute et vous oriente.</span></div><button class="btn" id="docAlert">Créer une alerte VBG</button></div></article>',"Contenus éducatifs");
+  $("#docAlert").onclick=()=>go("alert");}
+
+/* ---- BD ---- */
+$("#bdGrid").innerHTML=DATA.bds.map(b=>'<li><button class="ecard" data-b="'+b.slug+'"><span class="eimg bd"><img src="'+b.panels[0].img+'" alt="" width="800" height="600"><b class="pin">'+esc(b.cases)+'</b></span><span class="ebody"><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="ecat">'+esc(b.cat)+'</span>'+(b.conv?'<span class="conv">Avec bulles de conversation</span>':'')+'</span><span class="etitle">'+esc(b.title)+'</span><span class="esum">'+esc(b.sum)+'</span><span class="emeta">'+esc(b.meta)+'</span></span></button></li>').join("");
+$("#bdGrid").onclick=e=>{const c=e.target.closest("[data-b]");if(c)openBd(c.dataset.b);};
+const EMO={confiance:"Confiance",peur:"Peur",malaise:"Malaise",honte:"Honte",calme:"Calme",doute:"Doute",prudence:"Prudence",colere:"Colère",tristesse:"Tristesse"};
+const ICO={dit:'<path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H11l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>',pense:'<path d="M7 18a4 4 0 0 1-.7-7.9A5.5 5.5 0 0 1 17 8.5a4.3 4.3 0 0 1 .5 8.5zM5 21a1.3 1.3 0 1 0 0 .1z"/>',ressent:'<path d="M13 2L4 14h7l-2 8 10-13h-7z"/>'};
+function bubHtml(b){const ico='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+ICO[b.type]+'</svg>';
+  const head=b.type==="ressent"?'<span class="head">'+(EMO[b.emotion]||"Ressent")+'</span>':'';
+  return '<div class="bub '+b.type+' c-'+b.color+' t-'+b.tail+'" data-t="'+b.type+'" data-x="'+b.x+'" data-y="'+b.y+'" style="left:'+b.x+'%;top:'+b.y+'%"><span class="in"><span class="fill">'+head+(b.who?'<span class="who">'+esc(b.who)+'</span>':'')+esc(b.text)+(b.type==="ressent"?"":ico)+'</span>'+(b.type==="ressent"?"":'<i class="tail"></i>')+'</span></div>';}
+const BDMAP={"harcelement-en-ligne-quand-les-messages-ne-s-arretent-plus":"bd1","une-photo-un-chantage-sextorsion":"bd2","qui-regarde-par-dessus-mon-epaule-surveillance":"bd3","le-faux-profil-arnaque-sentimentale":"bd4"};
+let L={dit:true,pense:true,ressent:true},rev=false,revN=3,mode="step",pi=0,curBd=null;
+function openBd(slug){curBd=DATA.bds.find(b=>b.slug===slug);L={dit:true,pense:true,ressent:true};rev=false;mode="step";pi=0;
+  ovOpen('<article class="doc"><button class="back2">← Toutes les bandes dessinées</button><br><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="ecat">'+esc(curBd.cat)+'</span><span class="conv">Avec bulles de conversation</span></span><h1>'+esc(curBd.title)+'</h1><p class="sum">'+esc(curBd.sum)+'</p>'+
+  '<div class="bar" role="group" aria-label="Mode de lecture"><button data-mode="step" aria-pressed="true">Case par case</button><button data-mode="scroll" aria-pressed="false">Défilement</button></div>'+
+  '<div class="tools2" role="group" aria-label="Choisir ce qui est affiché dans les cases"><button class="lay" data-l="dit" aria-pressed="true">Ce qu’on dit</button><button class="lay" data-l="pense" aria-pressed="true">Ce qu’on pense</button><button class="lay" data-l="ressent" aria-pressed="true">Ce qu’on ressent</button><button class="lay rev" id="rev" aria-pressed="false">Révéler pas à pas</button><button class="lay more" id="more" hidden></button></div><p class="vh" role="status" aria-live="polite" id="blive"></p>'+
+  '<details class="leg"><summary>Comprendre les codes couleur</summary><div class="lb"><p>Chaque bulle a une <b>forme</b>, une <b>couleur</b> et un <b>pictogramme</b> : la couleur n’est jamais seule.</p><ul><li><b>Bulle ronde, trait plein</b> : ce que la personne dit.</li><li><b>Nuage en pointillés</b> : ce qu’elle pense sans le dire.</li><li><b>Bulle à angles coupés et nom de l’émotion</b> : ce qu’elle ressent.</li><li>Vert : calme · Jaune : prudence · Orange : malaise · Rouge : danger · Bleu : tristesse · Violet : peur, honte.</li></ul></div></details>'+
+  '<ol class="panels step" id="pans">'+curBd.panels.map((p,i)=>'<li class="pn'+(i===0?' on':'')+'"><figure><div class="stage"><img src="assets/'+BDMAP[curBd.slug]+'-'+(i+1)+'.webp" alt="'+esc(p.alt)+'" width="800" height="600"><div class="over">'+p.bub.map(bubHtml).join("")+'</div></div>'+(p.say?'<p class="say">'+esc(p.say)+'</p>':'')+'<figcaption><span class="n">'+(i+1)+'</span>'+esc(p.cap.replace(/^\d+\s*/,""))+'</figcaption></figure></li>').join("")+'</ol>'+
+  '<div class="pnav" id="pnav"><button class="btn out" id="pp">Précédente</button><span class="pcount" id="pc" aria-live="polite"></span><button class="btn" id="pnx">Suivante</button></div></article>',"Bandes dessinées");
+  const B=$("#ovBody");
+  $$("[data-mode]",B).forEach(b=>b.onclick=()=>{mode=b.dataset.mode;$$("[data-mode]",B).forEach(x=>x.setAttribute("aria-pressed",x===b));$("#pans").classList.toggle("step",mode==="step");$("#pnav").hidden=mode!=="step";paintP();});
+  $$("[data-l]",B).forEach(b=>b.onclick=()=>{L[b.dataset.l]=!L[b.dataset.l];b.setAttribute("aria-pressed",L[b.dataset.l]);paintB();});
+  $("#rev",B).onclick=()=>{rev=!rev;revN=rev?0:3;$("#rev").setAttribute("aria-pressed",rev);paintB();};
+  $("#more",B).onclick=()=>{if(revN<3){revN++;paintB();}};
+  $("#pp",B).onclick=()=>{if(pi>0){pi--;paintP();}};$("#pnx",B).onclick=()=>{if(pi<4){pi++;paintP();}};
+  paintP();paintB();}
+const ORDER=["dit","pense","ressent"],LBL=["Montrer ce qu’on dit","Montrer ce qu’on pense","Montrer ce qu’on ressent"];
+function paintB(){const B=$("#ovBody");$$(".bub",B).forEach(b=>{const t=b.dataset.t;b.hidden=!L[t]||(rev&&ORDER.indexOf(t)>=revN);});
+  const m=$("#more",B);m.hidden=!rev||revN>=3;if(!m.hidden)m.textContent=LBL[revN];$("#blive").textContent=rev?(revN<3?"Étape "+revN+" sur 3":"Toutes les bulles sont affichées"):"";}
+function fitB(){const B=$('#ovBody');$$('.stage',B).forEach(st=>{const R=st.getBoundingClientRect();if(!R.width)return;$$('.bub',st).forEach(b=>{const x=parseFloat(b.dataset.x),y=parseFloat(b.dataset.y);b.style.left=x+'%';b.style.top=y+'%';const r=b.getBoundingClientRect();let dx=0,dy=0;if(r.left<R.left+4)dx=R.left+4-r.left;if(r.right>R.right-4)dx=R.right-4-r.right;if(r.top<R.top+4)dy=R.top+4-r.top;if(r.bottom>R.bottom-4)dy=R.bottom-4-r.bottom;if(dx)b.style.left='calc('+x+'% + '+dx+'px)';if(dy)b.style.top='calc('+y+'% + '+dy+'px)';});});}
+function paintP(){const B=$("#ovBody");$$(".pn",B).forEach((p,i)=>p.classList.toggle("on",i===pi));$("#pc").textContent="Case "+(pi+1)+" sur 5";$("#pp").disabled=pi===0;$("#pnx").disabled=pi===4;fitB();}
+function closeOvKey(){}
+/* ---- explorer / notifications / messages ---- */
+$("#tagList").innerHTML=[["#soutien","48 publications"],["#sécurité","31 publications"],["#famille","27 publications"],["#confiance","19 publications"],["#respect","14 publications"]].map(([t,c])=>'<button class="li" data-toast="Thématique simulée."><span><b>'+t+'</b><small>'+c+'</small></span></button>').join("");
+$("#notifList").innerHTML=[["Lumière","a réagi à votre publication","il y a 5 min","#5B2BB8"],["Cap_Sud","vous suit maintenant","il y a 1 h","#0B6B54"],["Équipe GANXÔ","Bienvenue sur le forum. Pensez à lire nos fiches éducatives.","hier","#C8200E"]].map(([n,t,d,c])=>'<button class="li" data-toast="Notification simulée."><span class="av s40" style="background:'+c+'" aria-hidden="true">'+esc(n[0])+'</span><span><b>'+esc(n)+'</b><small>'+esc(t)+'</small></span><span class="meta">'+d+'</span></button>').join("");
+$("#msgList").innerHTML=[["Baobab","Merci pour ton message, ça m’a fait du bien.","10:42","#2B33C9"],["Rivage","On se retrouve dans le groupe ce soir ?","hier","#17703A"],["Étoile","Je t’envoie le lien de la fiche.","lundi","#B33A00"]].map(([n,t,d,c])=>'<button class="li" data-toast="Conversation simulée."><span class="av s40" style="background:'+c+'" aria-hidden="true">'+esc(n[0])+'</span><span><b>'+esc(n)+'</b><small>'+esc(t)+'</small></span><span class="meta">'+d+'</span></button>').join("");
+
+/* ---- alerte : chat ---- */
+const cats=["Harcèlement et intimidation","Images intimes et chantage","Surveillance et contrôle","Comptes, données et identité","Manipulation et arnaques","Haine et attaques de groupe","Technologies et IA","Autre situation"];
+let A={started:false,step:"init",cat:"",msg:"",contact:"",ticket:null,sos:false};
+const log=$("#gnal-log"),inp=$("#gnal-in"),snd=$("#gnal-send");
+function el(c,t){const d=document.createElement("div");d.className=c;if(t!=null)d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
+const bot=t=>el("gm bot",t),me=t=>el("gm me",t);
+function qr(items){const w=el("qr");w.setAttribute("role","group");items.forEach(([t,f])=>{const b=document.createElement("button");b.type="button";b.textContent=t;b.onclick=()=>{w.remove();f();};w.appendChild(b);});log.scrollTop=log.scrollHeight;const f=$("button",w);if(f)f.focus({preventScroll:true});}
+function comp(on,ph){inp.disabled=!on;snd.disabled=!on;inp.placeholder=ph||"Choisissez une réponse ci-dessus…";if(!on)inp.value="";else inp.focus({preventScroll:true});}
+function startChat(){A={started:true,step:"cat",cat:"",msg:"",contact:"",ticket:null,sos:false};log.innerHTML="";comp(false);
+  bot("Bonjour, je suis là pour vous aider à envoyer une alerte à l’équipe GANXÔ. Vous pouvez vous arrêter à tout moment. Que s’est-il passé ?");
+  qr(cats.map(c=>[c,()=>{A.cat=c;me(c);askDesc();}]));}
+function askDesc(){A.step="desc";bot("Merci de me l’avoir dit. Racontez-moi ce qui s’est passé, avec vos mots : où, quand, qui est concerné·e. (10 caractères minimum)");comp(true,"Décrivez la situation…");}
+function askContact(){A.step="contact";comp(false);bot("Souhaitez-vous laisser un moyen de vous répondre ? C’est facultatif : vous pourrez aussi suivre la réponse ici.");
+  qr([["Mon e-mail",()=>{me("Mon e-mail");A.step="email";bot("Quelle est votre adresse e-mail ?");comp(true,"vous@exemple.org");}],["Mon téléphone",()=>{me("Mon téléphone");A.step="phone";bot("Quel est votre numéro de téléphone ?");comp(true,"+229 …");}],["Rester anonyme",()=>{me("Rester anonyme");A.contact="";confirm_();}]]);}
+function confirm_(){A.step="confirm";comp(false);bot("Voici le résumé de votre alerte. En l’envoyant, vous acceptez qu’elle soit transmise, de façon confidentielle, à l’équipe d’écoute.");
+  const b=el("sumbox"),dl=document.createElement("dl");[["Type",A.cat],["Message",A.msg.length>120?A.msg.slice(0,120)+"…":A.msg],["Contact",A.contact||"Anonyme"]].forEach(([k,v])=>{const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;dl.appendChild(dt);dl.appendChild(dd);});b.appendChild(dl);
+  qr([["J’accepte et j’envoie l’alerte",send],["Recommencer",()=>{me("Recommencer");startChat();}]]);}
+function send(){me("J’accepte et j’envoie l’alerte");A.ticket="ALR-2026-"+String(Math.floor(1000+Math.random()*8999));const w=bot("Envoi en cours…");setTimeout(()=>{w.remove();
+  el("gm ok","✅ Alerte envoyée (simulation). Numéro de suivi fictif : "+A.ticket+". L’équipe GANXÔ vous répondra ici, dans cette conversation. Rien n’a été réellement transmis.");
+  A.step="follow";comp(true,"Écrire un message à l’équipe…");},700);}
+$("#gnal-form").onsubmit=e=>{e.preventDefault();const v=inp.value.trim();if(!v)return;
+  if(A.step==="desc"){if(v.length<10){bot("Pouvez-vous écrire quelques mots de plus ? (10 caractères minimum)");return;}A.msg=v;me(v);askContact();}
+  else if(A.step==="email"){if(!/^\S+@\S+\.\S+$/.test(v)){bot("Cette adresse ne semble pas valide. Pouvez-vous la vérifier ?");return;}A.contact=v;me(v);confirm_();}
+  else if(A.step==="phone"){A.contact=v;me(v);confirm_();}
+  else if(A.step==="follow"){me(v);comp(false);setTimeout(()=>{const d=el("gm team");const t=document.createElement("span");t.className="tag";t.textContent="Équipe GANXÔ (simulation)";d.appendChild(t);d.appendChild(document.createTextNode("Merci pour votre message. Nous sommes là, prenez le temps qu’il vous faut."));log.scrollTop=log.scrollHeight;comp(true,"Écrire un message à l’équipe…");},1200);}};
+(function(){const btn=$("#sosBtn"),ring=$("#sosRing");let raf,t0=null;
+  function stop(){cancelAnimationFrame(raf);t0=null;ring.style.strokeDashoffset=176;}
+  function tick(now){if(t0===null)return;const p=Math.min(1,(now-t0)/2000);ring.style.strokeDashoffset=176*(1-p);if(p>=1){t0=null;fire();}else raf=requestAnimationFrame(tick);}
+  function start(){if(t0!==null)return;t0=performance.now();raf=requestAnimationFrame(tick);}
+  function fire(){ring.style.strokeDashoffset=176;startChat();A.sos=true;A.cat="Autre situation";A.msg="J’ai besoin d’aide. Je ne suis pas en sécurité en ce moment.";el("gm me","SOS");bot("Votre alerte est préparée avec le bouton SOS. Aucun service d’urgence n’a été contacté. Vérifiez le message, puis envoyez.");log.querySelectorAll(".qr").forEach(q=>q.remove());comp(false);A.step="confirm";
+    const b=el("sumbox"),dl=document.createElement("dl");[["Type",A.cat],["Message",A.msg],["Contact","Anonyme"]].forEach(([k,v])=>{const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;dl.appendChild(dt);dl.appendChild(dd);});b.appendChild(dl);
+    qr([["J’accepte et j’envoie l’alerte",send],["Recommencer",()=>{me("Recommencer");startChat();}]]);toast("Alerte préparée. Aucun service d’urgence n’a été contacté.");}
+  btn.addEventListener("pointerdown",e=>{e.preventDefault();start();});["pointerup","pointerleave","pointercancel"].forEach(ev=>btn.addEventListener(ev,stop));
+  btn.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();if(!e.repeat)start();}});btn.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")stop();});btn.addEventListener("contextmenu",e=>e.preventDefault());})();
+
+/* ---- profil ---- */
+$("#openSettings").onclick=()=>sheet('<h3>Paramètres de profil</h3>'+
+ '<div class="set"><div><strong id="l-dark">Mode nuit</strong><small>Fond sombre, plus doux pour les yeux.</small></div><button class="sw" role="switch" aria-checked="'+isDark()+'" aria-labelledby="l-dark" data-pref="dark"></button></div>'+
+ '<div class="set"><div><strong id="l-prev">Masquer les aperçus de notification</strong><small>Le contenu n’apparaît pas à l’écran verrouillé.</small></div><button class="sw" role="switch" aria-checked="'+PREF.prev+'" aria-labelledby="l-prev" data-pref="prev"></button></div>'+
+ '<div class="set"><div><strong id="l-pin">Code PIN</strong><small>Demander un code à l’ouverture de l’application.</small></div><button class="sw" role="switch" aria-checked="'+PREF.pin+'" aria-labelledby="l-pin" data-pref="pin"></button></div>'+
+ '<div id="pinbox" '+(PREF.pin?'':'hidden')+' style="padding:6px 0 10px"><div class="fld" style="margin:0"><label for="pin">Choisir un code à 4 chiffres</label><input class="fc" id="pin" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" placeholder="••••"></div></div>'+
+ '<div class="set"><div><strong id="l-disc">Mode discret</strong><small>Remplace le nom et l’icône par « Notes » sur le téléphone.</small></div><button class="sw" role="switch" aria-checked="'+PREF.disc+'" aria-labelledby="l-disc" data-pref="disc"></button></div>'+
+ '<div style="display:grid;gap:8px;margin-top:16px"><button class="btn out" id="lo">Se déconnecter</button><button class="btn red" id="del">Supprimer mon compte</button><button class="btn grey" data-close>Fermer</button></div>',s=>{
+  s.addEventListener("click",e=>{const b=e.target.closest("[data-pref]");if(!b)return;const on=b.getAttribute("aria-checked")!=="true";b.setAttribute("aria-checked",on);const k=b.dataset.pref;
+    if(k==="dark")setTheme(on);else PREF[k]=on;if(k==="pin"){$("#pinbox",s).hidden=!on;if(on)$("#pin",s).focus();}if(k==="disc")toast(on?"Mode discret activé (simulé).":"Mode discret désactivé.");});
+  $("#pin",s).oninput=e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,4);};
+  $("#lo",s).onclick=()=>{closeSheet();showScreen("auth");};
+  $("#del",s).onclick=()=>{closeSheet();sheet('<h3>Supprimer mon compte ?</h3><p style="margin:8px 0 16px">Vos publications et votre pseudonyme seraient effacés définitivement. Dans cette maquette, rien n’est supprimé.</p><div style="display:grid;gap:8px"><button class="btn red" id="delOk">Oui, supprimer (simulé)</button><button class="btn out" data-close>Annuler</button></div>',t=>{$("#delOk",t).onclick=()=>{closeSheet();toast("Compte supprimé (simulé).");setTimeout(()=>showScreen("auth"),900);};});};});
+const PREF={prev:true,pin:false,disc:false};
+
+if(store.get("gnx-cookie")==="1")$("#cookie").hidden=true;
+window.__gn={go,enter,setTheme,showScreen,openBd,openDoc,drawer,startChat};
+})();
+</script>
+</body>
+</html>
