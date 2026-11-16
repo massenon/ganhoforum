@@ -71,6 +71,7 @@ RewriteRule ^privacy_policy(\/|)$ index.php?app=stat_pages&page=privacy_policy [
 RewriteRule ^cookies_policy(\/|)$ index.php?app=stat_pages&page=cookies_policy [QSA]
 RewriteRule ^about_us(\/|)$ index.php?app=stat_pages&page=about_us [QSA]
 RewriteRule ^faqs(\/|)$ index.php?app=stat_pages&page=faqs [QSA]
+RewriteRule ^supprimer-mon-compte(\/|)$ index.php?app=stat_pages&page=delete_account [QSA]
 RewriteRule ^suggested(\/|)$ index.php?app=suggested [QSA]
 RewriteRule ^chats(\/|)$ index.php?app=chats [QSA]
 RewriteRule ^affiliates(\/|)$ index.php?app=affiliates [QSA]

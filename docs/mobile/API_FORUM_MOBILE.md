@@ -1,7 +1,8 @@
-# API mobile du forum GANXÔ : v1
+# API mobile du forum GANXÔ : v1 (+ v1.1)
 
 > **Statut (14 novembre 2026) : livrée côté serveur et testée en local contre les bases locales** (`mobile_v1.php`,
 > `core/apps/mobile_v1/`). **Aucune application mobile ne l'appelle encore, et elle n'a pas été déployée en production.**
+> **Addendum v1.1 (16 novembre 2026)** : signalement, blocage, suppression de compte, profils publics, stories, recherche, « à la une » ; contrat détaillé avec exemples dans `API_FORUM_MOBILE_V1_1.md`.
 > Ce document décrit ce qui est implémenté, pas une proposition. Le contrat côté « alerte » s'appuie sur l'API serveur à serveur
 > de ganhovbg (`/api/forum/*`) ; la future API mobile de ganhovbg est décrite dans `ganhovbg/docs/mobile/API_MOBILE.md`.
 
@@ -36,6 +37,7 @@ Réponse réussie : `{ "data": …, "meta": … }`. Erreur : `{ "error": "code",
 | 404 | `not_found` | Ressource absente, privée ou hors périmètre (jamais de différence entre les trois) |
 | 405 | `method_not_allowed` | Méthode non prévue pour cette route |
 | 413 | `payload_too_large` | Corps trop gros |
+| 403 | `cannot_target_self`, `admin_account` | Signaler/bloquer soi-même ; compte administrateur (se supprime depuis le web) |
 | 422 | `validation_failed`, `banned_word` | Erreurs par champ ; mot interdit par la modération |
 | 429 | `too_many_requests` | Attendre `Retry-After` |
 | 502 / 503 | `upstream_error`, `alerts_unavailable` | Le service d'alerte de ganho.app ne répond pas |
@@ -59,8 +61,14 @@ Réponse réussie : `{ "data": …, "meta": … }`. Erreur : `{ "error": "code",
 | `POST posts` ✱ | Publier du texte `{text, thread_id?, privacy?}` ; mots interdits de la modération appliqués | logique de `publish_post` + `cl_adm_blocked_word` |
 | `POST posts/{id}/like` ✱ | Bascule le « j'aime » → `{liked, likes}` | logique de `like_post` |
 | `GET notifications` ✱ | `?type=notifs\|mentions` | `cl_get_notifications` |
-| `GET education`, `GET education/{slug}` | Fiches éducatives publiées (`?category=`) ; détail avec `body_source`, `body_html`, `toc` | `core/apps/education` |
+| `GET education`, `GET education/{slug}` | Fiches éducatives publiées (`?category=`), champ `featured` (= épinglée), épinglées en premier ; détail avec `body_source`, `body_html`, `toc` | `core/apps/education` |
 | `GET comics`, `GET comics/{slug}` | Bandes dessinées ; détail avec cases : `image_url`, `alt`, `caption`, `dialogue`, **`bubbles`** (dit / pense / ressent, couleur, position en %) | idem |
+| `POST posts/{id}/report` ✱, `POST users/{id}/report` ✱ | Signaler `{reason: harassment\|hate\|violence\|sexual\|spam\|impersonation\|other, details? ≤ 500}` ; idempotent ; ajoute une ligne à la file « Modération » de l'admin | tables `cl_pub_reports` / `cl_profile_reports` |
+| `POST users/{id}/block` ✱, `DELETE users/{id}/block` ✱, `GET me/blocks` ✱ | Bloquer / débloquer / lister ; exclusion dans les deux sens (fil, réponses, notifications, recherche, stories, profils) | table `cl_blocks`, logique de `block_user` |
+| `DELETE me` ✱ ou `POST me/delete` ✱ | Suppression de compte `{password}` ; purge aussi `cl_mobile_tokens`, `cl_mobile_devices`, `cl_mobile_alerts` | `cl_delete_user_data` (comme `/settings/delete`) |
+| `GET users/{id}` ✱, `GET users/{id}/posts` ✱ | Profil public ; publications `?tab=posts\|media\|likes` ; 404 si bloqué ou privé | `cl_can_view_profile`, `cl_get_profile_posts`, `cl_get_profile_likes` |
+| `GET stories` ✱ | Stories actives des comptes suivis | `cl_timeline_swifts` |
+| `GET search?q=&type=posts\|people` ✱ | Recherche | `cl_search_posts`, `cl_search_people` |
 | `GET alerts/config` | Catégories et bornes (`subject_max`, `desc_min`, `desc_max`) | API ganhovbg `/forum/alert-config` |
 | `POST alerts` | Créer une alerte `{category, message, email?, phone?}` (compte **non requis**, `X-Device-Id` requis) | API ganhovbg `/forum/alerts` |
 | `GET alerts` | Mes alertes (celles de ce compte ET de cet appareil) | table `cl_mobile_alerts` |
@@ -78,6 +86,10 @@ Rendus de texte : le texte d'une publication est renvoyé en **texte brut** (bal
 | « J'aime » | 120 / 10 min par compte |
 | Création d'alerte | 5 / h par compte ou appareil, 15 / h par IP |
 | Réponse à une alerte | 30 / h |
+| Signalement (v1.1) | 10 / h par compte, 40 / h par IP |
+| Blocage / déblocage (v1.1) | 40 / h par compte |
+| Suppression de compte (v1.1) | 5 / h par compte, 10 / h par IP, comptées avant la vérification du mot de passe |
+| Recherche (v1.1) | 60 / 5 min par IP |
 
 Compromis assumé : la limite par identifiant peut bloquer 15 minutes la connexion d'une personne visée par des essais répétés ; la réponse reste identique que le compte existe ou non.
 
@@ -92,12 +104,12 @@ Compromis assumé : la limite par identifiant peut bloquer 15 minutes la connexi
 
 ## 5. Tables (créées à la demande, aucune migration)
 
-`cl_mobile_tokens`, `cl_mobile_devices`, `cl_mobile_alerts`, `cl_mobile_idem` (+ `cl_rate_limits`, déjà utilisée par « Mot de passe oublié »).
+`cl_mobile_tokens`, `cl_mobile_devices`, `cl_mobile_alerts`, `cl_mobile_idem` (+ `cl_rate_limits`, déjà utilisée par « Mot de passe oublié »). La v1.1 n'ajoute **aucune** table : signalements, blocages et stories réutilisent `cl_pub_reports`, `cl_profile_reports`, `cl_blocks` et la colonne `swift` des utilisateurs.
 Nettoyage automatique : idempotence après 24 h, jetons expirés depuis plus de 7 jours.
 
 ## 6. Mise en production
 
-1. Envoyer : `mobile_v1.php`, `core/apps/mobile_v1/` (2 fichiers), `.htaccess` (règles `api/mobile/v1` et `E=HTTP_AUTHORIZATION`), et `nginx.conf` si Nginx.
+1. Envoyer : `mobile_v1.php`, `core/apps/mobile_v1/` (3 fichiers : `lib.php`, `routes.php`, `routes_v11.php`), `.htaccess` (règles `api/mobile/v1` et `E=HTTP_AUTHORIZATION`), et `nginx.conf` si Nginx.
 2. `core/settings.php` de production avec `$ganho_api_url = https://ganho.app/api` et le **même secret** que `FORUM_ALERT_SECRET` de ganhovbg.
 3. Tester depuis un terminal :
    ```bash
@@ -109,9 +121,10 @@ Nettoyage automatique : idempotence après 24 h, jetons expirés depuis plus de 
 
 ## 7. Non livré (volontairement)
 
-Inscription, mot de passe oublié, suppression de compte (exigée par les stores avant publication), envoi d'images et de vidéos, sondages, messagerie privée,
-abonnements, signalements, et **l'envoi des notifications push** (le jeton est enregistré, rien n'est encore émis). Chaque point demande une décision ou un test
-dédié ; ils sont à planifier avec l'application (voir `ganhovbg/docs/mobile/PLAN_MOBILE_APP.md`).
+Inscription, mot de passe oublié, envoi d'images et de vidéos (publier avec média), vote dans un sondage, publication de stories, messagerie privée, suivre / ne plus suivre un compte,
+réactions autres que le « j'aime » (le web n'en a pas), et **l'envoi des notifications push** (le jeton est enregistré, rien n'est encore émis).
+Livré en v1.1 (donc retiré de cette liste) : suppression de compte, signalements, blocage, profils publics, stories (lecture), recherche.
+Chaque point restant demande une décision ou un test dédié ; ils sont à planifier avec l'application (voir `ganhovbg/docs/mobile/PLAN_MOBILE_APP.md`).
 
 ## 8. Tests faits (14 novembre 2026, bases locales, serveur `php -S`)
 
@@ -120,3 +133,13 @@ dédié ; ils sont à planifier avec l'application (voir `ganhovbg/docs/mobile/P
 texte vide (422) ; notifications ; 21 fiches éducatives et détail ; 4 bandes dessinées avec 5 cases et bulles ; alerte : configuration, création sans compte,
 liste, lecture des messages, **404 depuis un autre appareil**, réponse. Toutes les données de test ont été supprimées (comptages identiques à l'état initial).
 **Non testé** : Apache réel et en-tête `Authorization` sur l'hébergeur, forte charge, mot interdit (`banned_word`), réponses à un fil (`thread_id`), `DELETE devices`, expiration réelle des jetons, pas de test automatisé PHP dans ce dépôt.
+
+### Tests v1.1 (16 novembre 2026, bases locales, trois comptes jetables `mvtesta/b/c/d`, tous supprimés ensuite)
+
+Signalement de publication et de profil : nominal (201), répété (200, une seule ligne), motif invalide, détails > 500, publication inconnue (404), sans jeton (401), propre contenu (403), méthode GET (405), **11e signalement en 1 h : 429 avec `Retry-After`** ; la ligne apparaît dans la file de modération de l'admin (`cl_adm_queue` : commentaire « [Harcèlement] … », 2 signalements en attente).
+Blocage : bloquer, re-bloquer (idempotent), se bloquer soi-même (403), compte inconnu (404), liste, débloquer deux fois ; avec A bloquant B (ils se suivaient) : abonnements retirés, la publication de B disparaît du fil de A, ses réponses et sa notification « j'aime » sont exclues pour A, `users/B`, `users/B/posts`, `posts/B` répondent 404 pour A, A n'apparaît plus dans la recherche de B ni B dans celle de A, et B reçoit 404 sur les publications et le profil de A ; stories de B masquées pour A.
+Profils : profil, onglets posts / media / likes avec pagination `before` (nouveau curseur du fil vérifié sur 2 pages), onglet inconnu (422), profil privé (`followers`) : 404 puis 200 une fois abonné ; story simulée (insérée en base puis retirée).
+Suppression de compte : sans mot de passe et mot de passe faux (422), sans jeton (401), 6 essais d'affilée (429 au 6e), suppression réussie par `DELETE me` et par `POST me/delete` : jeton ensuite 401, connexion refusée, comptes de lignes **à zéro** pour le compte supprimé dans `cl_users`, `cl_publications`, `cl_mobile_tokens`, `cl_mobile_devices`, `cl_mobile_alerts` (suivi du compte et de son appareil), `cl_blocks`, `cl_pub_reports`, `cl_publikes`, `cl_connections` ; compteur de « j'aime » d'une publication tierce décrémenté.
+Éducation / BD : `featured` et `featured_count` (5 fiches, 1 BD). Après nettoyage, les comptages de toutes les tables du forum sont identiques à l'état initial (comptes `usertest` / `admintest` intacts).
+**Non testé** : refus d'un compte administrateur (volontairement, pour ne jamais risquer de supprimer `admintest`), vidéos (`poster_url`), publications `gif` / `audio`, Apache réel (en-tête `Authorization`, méthode DELETE), forte charge.
+

@@ -3,7 +3,7 @@
 # Chaque route : [méthode, motif, gestionnaire, authentification requise]. Les gestionnaires reçoivent les captures du motif.
 
 function mv1_routes() {
-    return array(
+    return array_merge(array(
         array('GET',    '#^status$#',                        'mv1_h_status',          false),
         array('POST',   '#^devices$#',                       'mv1_h_device_register', false),
         array('DELETE', '#^devices/([A-Fa-f0-9-]{16,64})$#', 'mv1_h_device_delete',   true),
@@ -26,7 +26,7 @@ function mv1_routes() {
         array('POST',   '#^alerts$#',                        'mv1_h_alert_create',    false),
         array('GET',    '#^alerts/([A-Za-z0-9-]{3,30})/messages$#',  'mv1_h_alert_messages', false),
         array('POST',   '#^alerts/([A-Za-z0-9-]{3,30})/messages$#',  'mv1_h_alert_reply',    false),
-    );
+    ), mv1_routes_v11());
 }
 
 function mv1_dispatch() {
@@ -178,28 +178,34 @@ function mv1_h_feed() {
     require_once(cl_full_path("core/apps/home/app_ctrl.php"));
     list($limit, $before) = mv1_page_args();
     $posts = cl_get_timeline_feed($limit, $before);
+    $posts = is_array($posts) ? $posts : array();
+    # Curseur = offset_id (identifiant de la ligne du fil, pas celui de la publication) ; calculé AVANT le filtrage des blocages.
+    $cursor = null;
+    foreach ($posts as $p) { if (!empty($p['offset_id'])) { $cursor = (int) $p['offset_id']; } }
     $out = array();
-    foreach ((is_array($posts) ? $posts : array()) as $p) { $out[] = mv1_post_out($p); }
-    $last = $out ? $out[count($out) - 1]['id'] : null;
-    mv1_ok($out, array('limit' => $limit, 'next_before' => (count($out) >= $limit) ? $last : null, 'has_more' => count($out) >= $limit));
+    foreach (mv1_filter_posts($posts) as $p) { $out[] = mv1_post_out($p); }
+    $more = count($posts) >= $limit;
+    mv1_ok($out, array('limit' => $limit, 'next_before' => $more ? $cursor : null, 'has_more' => $more));
 }
 
 function mv1_h_post_get($id) {
     require_once(cl_full_path("core/apps/thread/app_ctrl.php"));
     $t = cl_get_thread_data((int) $id);
-    if (empty($t['post']) || empty($t['post']['can_see'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
+    if (empty($t['post']) || empty($t['post']['can_see']) || mv1_is_blocked_either($t['post']['user_id'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
     mv1_ok(mv1_post_out($t['post']));
 }
 
 function mv1_h_post_replies($id) {
     require_once(cl_full_path("core/apps/thread/app_ctrl.php"));
     $t = cl_get_thread_data((int) $id);
-    if (empty($t['post']) || empty($t['post']['can_see'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
+    if (empty($t['post']) || empty($t['post']['can_see']) || mv1_is_blocked_either($t['post']['user_id'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
     list($limit, $before) = mv1_page_args(15, 50);
     $list = cl_get_thread_child_posts((int) $id, $limit, ($before === null ? 0 : $before), 'lt');
+    $list = is_array($list) ? $list : array();
     $out = array();
-    foreach ((is_array($list) ? $list : array()) as $p) { $out[] = mv1_post_out($p); }
-    mv1_ok($out, array('limit' => $limit, 'has_more' => count($out) >= $limit, 'next_before' => $out ? $out[count($out) - 1]['id'] : null));
+    foreach (mv1_filter_posts($list) as $p) { $out[] = mv1_post_out($p); }
+    $last = $list ? (int) $list[count($list) - 1]['id'] : null;
+    mv1_ok($out, array('limit' => $limit, 'has_more' => count($list) >= $limit, 'next_before' => count($list) >= $limit ? $last : null));
 }
 
 function mv1_h_post_create() {
@@ -259,7 +265,7 @@ function mv1_h_post_like($id) {
     $post = cl_raw_post_data((int) $id);
     if (empty($post)) { mv1_error(404, 'not_found', "Publication introuvable."); }
     $pd = cl_post_data($post);
-    if (empty($pd['can_see'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
+    if (empty($pd['can_see']) || mv1_is_blocked_either($post['user_id'])) { mv1_error(404, 'not_found', "Publication introuvable."); }
     if (!cl_has_liked($me['id'], (int) $id)) {
         cl_db_insert(T_LIKES, array('pub_id' => (int) $id, 'user_id' => $me['id'], 'time' => time()));
         $n = ((int) $post['likes_count']) + 1;
@@ -275,26 +281,37 @@ function mv1_h_post_like($id) {
 }
 
 function mv1_h_notifications() {
+    global $db;
     require_once(cl_full_path("core/apps/notifications/app_ctrl.php"));
     list($limit, $before) = mv1_page_args(15, 50);
     $type = (isset($_GET['type']) && $_GET['type'] === 'mentions') ? 'mentions' : 'notifs';
     $list = cl_get_notifications(array('type' => $type, 'offset' => $before, 'limit' => $limit));
     $out = array();
-    foreach ((is_array($list) ? $list : array()) as $n) {
+    $list = is_array($list) ? $list : array();
+    # cl_get_notifications() remplace `time` par un texte relatif : on relit l'horodatage brut.
+    $times = array();
+    if ($list) {
+        $ids = array_map('intval', array_column($list, 'id'));
+        foreach ($db->rawQuery("SELECT id, time FROM `" . T_NOTIFS . "` WHERE id IN (" . implode(',', $ids) . ")") as $t) { $times[(int) $t['id']] = (int) $t['time']; }
+    }
+    foreach ($list as $n) {
+        if (!empty($n['notifier_id']) && mv1_is_blocked_either($n['notifier_id'])) { continue; }
         $out[] = array(
             'id'      => isset($n['id']) ? (int) $n['id'] : 0,
             'subject' => isset($n['subject']) ? (string) $n['subject'] : '',
             'entry_id' => isset($n['entry_id']) ? (int) $n['entry_id'] : 0,
-            'created_at' => isset($n['time']) && is_numeric($n['time']) ? (int) $n['time'] : null,
-            'seen'    => isset($n['seen']) ? ((string) $n['seen'] !== '0') : null,
+            'created_at' => isset($times[(int) $n['id']]) ? $times[(int) $n['id']] : null,
+            'seen'    => isset($n['status']) ? ((string) $n['status'] !== '0') : null,
             'actor'   => array(
+                'id'       => isset($n['notifier_id']) ? (int) $n['notifier_id'] : 0,
                 'username' => isset($n['username']) ? (string) $n['username'] : '',
                 'name'     => mv1_plain(isset($n['name']) ? $n['name'] : (isset($n['username']) ? $n['username'] : '')),
                 'avatar'   => isset($n['avatar']) ? (string) $n['avatar'] : '',
             ),
         );
     }
-    mv1_ok($out, array('limit' => $limit, 'has_more' => count($out) >= $limit, 'next_before' => $out ? $out[count($out) - 1]['id'] : null));
+    $last = $list ? (int) $list[count($list) - 1]['id'] : null;
+    mv1_ok($out, array('limit' => $limit, 'has_more' => count($list) >= $limit, 'next_before' => count($list) >= $limit ? $last : null));
 }
 
 /* ------------------------------------------------------------------ Contenus éducatifs et bandes dessinées */
@@ -313,10 +330,11 @@ function mv1_h_edu_list() {
         $out[] = array(
             'slug' => $r['slug'], 'title' => $r['title'], 'summary' => isset($r['summary']) ? mv1_plain($r['summary']) : '',
             'category' => $r['category'], 'category_label' => $r['category_label'], 'audience' => $r['audience'],
-            'image_url' => $r['image_url'], 'minutes' => $r['minutes'], 'pinned' => (bool) $r['pinned'], 'updated_at' => (int) $r['updated_at'],
+            'image_url' => $r['image_url'], 'minutes' => $r['minutes'], 'pinned' => (bool) $r['pinned'], 'featured' => (bool) $r['pinned'], 'updated_at' => (int) $r['updated_at'],
         );
     }
-    mv1_ok($out, array('categories' => cl_edu_categories(), 'total' => count($out)));
+    # Ordre = celui du web : épinglées (« à la une ») d'abord, puis les plus récemment modifiées.
+    mv1_ok($out, array('categories' => cl_edu_categories(), 'total' => count($out), 'featured_count' => count(array_filter($out, function ($x) { return $x['featured']; }))));
 }
 
 function mv1_h_edu_get($slug) {
@@ -329,7 +347,7 @@ function mv1_h_edu_get($slug) {
     mv1_ok(array(
         'slug' => $r['slug'], 'title' => $r['title'], 'summary' => isset($r['summary']) ? mv1_plain($r['summary']) : '',
         'category' => $r['category'], 'category_label' => isset($cats[$r['category']]) ? $cats[$r['category']] : $r['category'],
-        'audience' => $r['audience'], 'image_url' => cl_edu_image_url($r['image']),
+        'audience' => $r['audience'], 'image_url' => cl_edu_image_url($r['image']), 'pinned' => !empty($r['pinned']), 'featured' => !empty($r['pinned']),
         'minutes' => cl_edu_reading_minutes($r['body']), 'updated_at' => (int) $r['updated_at'],
         'body_source' => (string) $r['body'], 'body_html' => $html, 'toc' => $toc,
     ));
@@ -342,10 +360,10 @@ function mv1_h_comics_list() {
         $out[] = array(
             'slug' => $r['slug'], 'title' => $r['title'], 'summary' => isset($r['summary']) ? mv1_plain($r['summary']) : '',
             'category' => $r['category'], 'category_label' => $r['category_label'], 'cover_url' => $r['cover_url'],
-            'panel_count' => $r['panel_count'], 'has_bubbles' => $r['has_bubbles'], 'pinned' => (bool) $r['pinned'], 'updated_at' => (int) $r['updated_at'],
+            'panel_count' => $r['panel_count'], 'has_bubbles' => $r['has_bubbles'], 'pinned' => (bool) $r['pinned'], 'featured' => (bool) $r['pinned'], 'updated_at' => (int) $r['updated_at'],
         );
     }
-    mv1_ok($out, array('total' => count($out)));
+    mv1_ok($out, array('total' => count($out), 'featured_count' => count(array_filter($out, function ($x) { return $x['featured']; }))));
 }
 
 function mv1_h_comics_get($slug) {
@@ -363,6 +381,7 @@ function mv1_h_comics_get($slug) {
     mv1_ok(array(
         'slug' => $r['slug'], 'title' => $r['title'], 'summary' => isset($r['summary']) ? mv1_plain($r['summary']) : '',
         'category' => $r['category'], 'category_label' => isset($cats[$r['category']]) ? $cats[$r['category']] : $r['category'],
+        'pinned' => !empty($r['pinned']), 'featured' => !empty($r['pinned']),
         'updated_at' => (int) $r['updated_at'], 'panels' => $panels,
     ));
 }

@@ -91,7 +91,7 @@ if ($gn_hide) {
 	$gn_desc     = $gn_generic_desc;
 }
 else {
-	if ($gn_pn == "stat_pages" || $gn_pn == "err404" || $gn_pn == "err500") {
+	if (($gn_pn == "stat_pages" && fetch_or_get($_GET['page'], "") != "delete_account") || $gn_pn == "err404" || $gn_pn == "err500") {
 		$gn_desc = $gn_generic_desc;
 	}
 

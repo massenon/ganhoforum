@@ -224,18 +224,71 @@ function mv1_post_out($p) {
     foreach ((isset($p['media']) && is_array($p['media'])) ? $p['media'] : array() as $m) {
         $src = isset($m['src']) ? (string) $m['src'] : '';
         if ($src === '') { continue; }
-        $media[] = array('type' => isset($m['type']) ? (string) $m['type'] : '', 'url' => function_exists('cl_get_media') ? cl_get_media($src) : $src);
+        $item = array('type' => isset($m['type']) ? (string) $m['type'] : '', 'url' => function_exists('cl_get_media') ? cl_get_media($src) : $src);
+        if ($item['type'] === 'video' && !empty($m['x']['poster_thumb'])) { $item['poster_url'] = cl_get_media((string) $m['x']['poster_thumb']); }
+        $media[] = $item;
     }
-    return array(
+    $type = isset($p['type']) ? (string) $p['type'] : 'text';
+    $out = array(
         'id'            => (int) $p['id'],
-        'type'          => (string) $p['type'],
+        'type'          => $type,
         'text'          => mv1_plain(isset($p['text']) ? $p['text'] : ''),
         'created_at'    => isset($p['time_raw']) ? (int) $p['time_raw'] : null,
         'author'        => mv1_user_out(isset($p['owner']) ? $p['owner'] : array('id' => 0, 'username' => '')),
         'likes'         => (int) str_replace(array(' ', ',', '.'), '', (string) $p['likes_count']),
         'replies'       => (int) str_replace(array(' ', ',', '.'), '', (string) $p['replys_count']),
+        'reposts'       => (int) str_replace(array(' ', ',', '.'), '', (string) (isset($p['reposts_count']) ? $p['reposts_count'] : 0)),
         'liked'         => !empty($p['has_liked']),
         'mine'          => !empty($p['is_owner']),
+        'thread_id'     => !empty($p['thread_id']) ? (int) $p['thread_id'] : null,
         'media'         => $media,
+        'poll'          => null,
+        'link'          => null,
+        'url'           => null,
     );
+    if ($type === 'poll' && !empty($p['poll']['options'])) {
+        $opts = array();
+        foreach ($p['poll']['options'] as $o) { $opts[] = array('option' => mv1_plain($o['option']), 'votes' => (int) $o['total'], 'percentage' => (int) $o['percentage']); }
+        $out['poll'] = array('total' => (int) $p['poll']['total'], 'has_voted' => !empty($p['poll']['has_voted']), 'options' => $opts);
+    }
+    if ($type === 'text' && !empty($p['og_data']) && is_array($p['og_data']) && !empty($p['og_data']['url'])) {
+        $o = $p['og_data'];
+        $out['link'] = array('url' => (string) $o['url'], 'title' => mv1_plain(isset($o['title']) ? $o['title'] : ''), 'description' => mv1_plain(isset($o['description']) ? $o['description'] : ''), 'image_url' => !empty($o['image']) ? (string) $o['image'] : null);
+    }
+    # URL de partage : seulement pour une publication visible par tout le monde (même règle que la page web /thread/{id}).
+    if (isset($p['priv_wcs']) && $p['priv_wcs'] === 'everyone' && (!isset($p['status']) || $p['status'] === 'active') && function_exists('cl_link')) {
+        $out['url'] = cl_link('thread/' . (int) $p['id']);
+    }
+    return $out;
+}
+
+/* ------------------------------------------------------------------ Blocages (table cl_blocks du web) */
+
+/** Identifiants des comptes bloqués par la personne OU qui l'ont bloquée (le web masque dans les deux sens). */
+function mv1_blocked_ids() {
+    global $db, $mv1;
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $cache = array();
+    if (empty($mv1['user_id'])) { return $cache; }
+    $u = (int) $mv1['user_id'];
+    $rows = $db->rawQuery("SELECT profile_id AS x FROM `" . T_BLOCKS . "` WHERE user_id = ? UNION SELECT user_id AS x FROM `" . T_BLOCKS . "` WHERE profile_id = ?", array($u, $u));
+    foreach ((is_array($rows) ? $rows : array()) as $r) { $cache[(int) $r['x']] = true; }
+    return $cache;
+}
+
+function mv1_is_blocked_either($user_id) {
+    $b = mv1_blocked_ids();
+    return isset($b[(int) $user_id]);
+}
+
+/** Retire les publications (brutes, avant mv1_post_out) dont l'auteur est bloqué dans un sens ou dans l'autre, et les publicités. */
+function mv1_filter_posts($list) {
+    $out = array();
+    foreach ((is_array($list) ? $list : array()) as $p) {
+        if (!is_array($p) || empty($p['id']) || !isset($p['owner']) || !empty($p['advertising'])) { continue; }
+        if (mv1_is_blocked_either($p['owner']['id'])) { continue; }
+        $out[] = $p;
+    }
+    return $out;
 }

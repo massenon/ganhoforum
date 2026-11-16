@@ -13,6 +13,7 @@ unset($_POST['session_id'], $_GET['session_id']);
 
 require_once(__DIR__ . "/core/apps/mobile_v1/lib.php");
 require_once(__DIR__ . "/core/apps/mobile_v1/routes.php");
+require_once(__DIR__ . "/core/apps/mobile_v1/routes_v11.php");
 
 try {
     require_once(__DIR__ . "/core/api_req_init.php");

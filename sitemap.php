@@ -19,7 +19,8 @@ $static = array(
 	"faqs"           => "themes/default/apps/faqs/content.phtml",
 	"terms_of_use"   => "themes/default/apps/terms/content.phtml",
 	"privacy_policy" => "themes/default/apps/privacy_policy/content.phtml",
-	"cookies_policy" => "themes/default/apps/cookies_policy/content.phtml"
+	"cookies_policy" => "themes/default/apps/cookies_policy/content.phtml",
+	"supprimer-mon-compte" => "themes/default/apps/delete_account/src/source.phtml"
 );
 
 foreach ($static as $path => $tpl) {
