@@ -8,7 +8,8 @@
 # @*************************************************************************@
 
 if (empty($_GET["uname"])) {
-	cl_redirect("404");
+	cl_not_found();
+	return;
 }
 
 $uname           = fetch_or_get($_GET["uname"], false);
@@ -18,7 +19,8 @@ $cl['page_tab']  = fetch_or_get($_GET["tab"], 'posts');
 
 
 if (empty($cl['prof_user'])) {
-	cl_redirect("404");
+	cl_not_found();
+	return;
 }
 
 require_once(cl_full_path("core/apps/profile/app_ctrl.php"));

@@ -52,6 +52,34 @@ if (!$mysqli->connect_errno) {
 		}
 	}
 
+	# Contenus éducatifs et bandes dessinées publiés (tables créées à la demande : requêtes ignorées si absentes)
+	$edu_last = 0;
+	$edu_rows = array();
+	$qr = $mysqli->query("SELECT slug, updated_at FROM cl_edu_items WHERE status = 'published' AND audience = 'all' ORDER BY updated_at DESC");
+	if ($qr) {
+		while ($row = $qr->fetch_assoc()) {
+			$edu_rows[] = array($base . "/contenus-educatifs/" . rawurlencode($row['slug']), (int) $row['updated_at']);
+			$edu_last = max($edu_last, (int) $row['updated_at']);
+		}
+	}
+	$bd_last = 0;
+	$bd_rows = array();
+	$qr = $mysqli->query("SELECT slug, updated_at FROM cl_edu_comics WHERE status = 'published' ORDER BY updated_at DESC");
+	if ($qr) {
+		while ($row = $qr->fetch_assoc()) {
+			$bd_rows[] = array($base . "/bandes-dessinees/" . rawurlencode($row['slug']), (int) $row['updated_at']);
+			$bd_last = max($bd_last, (int) $row['updated_at']);
+		}
+	}
+	if ($edu_rows) {
+		$urls[] = array($base . "/contenus-educatifs", gmdate("Y-m-d", $edu_last), "weekly", "0.8");
+		foreach ($edu_rows as $r) { $urls[] = array($r[0], gmdate("Y-m-d", $r[1]), "monthly", "0.7"); }
+	}
+	if ($bd_rows) {
+		$urls[] = array($base . "/bandes-dessinees", gmdate("Y-m-d", $bd_last), "weekly", "0.8");
+		foreach ($bd_rows as $r) { $urls[] = array($r[0], gmdate("Y-m-d", $r[1]), "monthly", "0.7"); }
+	}
+
 	$mysqli->close();
 }
 

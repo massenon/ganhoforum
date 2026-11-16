@@ -8,8 +8,23 @@
 
 RewriteEngine On
 
+# En-têtes de sécurité (mod_headers). HSTS uniquement quand la requête est en HTTPS.
+# Pas de CSP restrictive (le forum utilise des scripts en ligne) : seules les directives sans risque de casse sont posées.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(self), geolocation=(self), payment=(), usb=()"
+    Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+</IfModule>
+
 # Dossiers internes : jamais accessibles depuis le web (403)
-RewriteRule ^(core/(seeders|cron|logs)|site_backups|install)(/|$) - [F,L]
+RewriteRule ^(core|site_backups|install)(/|$) - [F,L]
+# Gabarits et contrôleurs : jamais appelés directement par un navigateur
+RewriteRule ^(apps|themes/[^/]+/apps)/.+\.(php|phtml)$ - [F,L]
+# Aucun PHP exécutable dans les envois des membres
+RewriteRule ^upload/.+\.(php|phtml|phar|php[0-9])$ - [F,L]
 
 # Production : tout passe en HTTPS (limité au domaine de production pour ne pas gêner le développement local)
 RewriteCond %{HTTP_HOST} ^forum\.ganho\.app$ [NC]

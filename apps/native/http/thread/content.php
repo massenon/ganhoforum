@@ -14,7 +14,8 @@ $thread_id         = cl_text_secure($thread_id);
 $cl['thread_data'] = cl_get_thread_data($thread_id);
 
 if (empty($cl['thread_data']['post'])) {
-	cl_redirect("404");
+	cl_not_found();
+	return;
 }
 
 

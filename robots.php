@@ -25,6 +25,8 @@ echo "Disallow: /admin_panel\n";
 echo "Disallow: /native_api/\n";
 echo "Disallow: /mobile_api/\n";
 echo "Disallow: /api.php\n";
+echo "Disallow: /api/mobile/\n";
+echo "Disallow: /mobile_v1.php\n";
 echo "Disallow: /oauth\n";
 echo "Disallow: /settings\n";
 echo "Disallow: /logout\n";

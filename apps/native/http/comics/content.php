@@ -11,7 +11,7 @@ $bd_slug = isset($_GET["slug"]) ? (string) $_GET["slug"] : "";
 
 if ($bd_slug !== "") {
 	$row = cl_edu_get_comic_by_slug($bd_slug);
-	if (!$row) { cl_redirect("404"); }
+	if (!$row) { cl_not_found(); return; }
 	$cats = cl_edu_categories();
 	$row["category_label"] = isset($cats[$row["category"]]) ? $cats[$row["category"]] : $row["category"];
 	$row["panels_list"]    = cl_edu_panels_decode($row["panels"]);

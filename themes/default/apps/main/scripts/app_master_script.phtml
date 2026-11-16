@@ -1228,6 +1228,43 @@
 			}
 
 			_smc.update_ilb = function() {
+				if (!$("a.fbox-media, a[data-fancybox]").length) {
+					return;
+				}
+				if (!$.fn.fancybox) {
+					/* visiteurs : fancybox (JS + CSS, 85 Ko) chargé à la première interaction avec une image de publication */
+					var gn_fbox_load = function(done) {
+						if ($.fn.fancybox) { if (done) { done(); } return; }
+						if (window.gn_fbox_loading) { window.gn_fbox_wait = done || window.gn_fbox_wait; return; }
+						window.gn_fbox_loading = true;
+						window.gn_fbox_wait = done || null;
+						var gn_fb_css = document.createElement('link');
+						gn_fb_css.rel = 'stylesheet';
+						gn_fb_css.href = '{%config theme_url%}/statics/css/libs/jquery.fancybox.css?v={%config version%}';
+						document.head.appendChild(gn_fb_css);
+						var gn_fb_js = document.createElement('script');
+						gn_fb_js.src = '{%config theme_url%}/statics/js/libs/jquery-plugins/jquery.fancybox.min.js?v={%config version%}';
+						gn_fb_js.onload = function() {
+							window.gn_fbox_loading = false;
+							_smc.update_ilb();
+							if (window.gn_fbox_wait) { var w = window.gn_fbox_wait; window.gn_fbox_wait = null; w(); }
+						};
+						gn_fb_js.onerror = function() { window.gn_fbox_loading = false; };
+						document.head.appendChild(gn_fb_js);
+					};
+					if (!window.gn_fbox_bound) {
+						window.gn_fbox_bound = true;
+						$(document).on('mouseover touchstart focusin', 'a.fbox-media, a[data-fancybox]', function() { gn_fbox_load(); });
+						$(document).on('click', 'a.fbox-media, a[data-fancybox]', function(event) {
+							if (!$.fn.fancybox) {
+								event.preventDefault();
+								var gn_el = this;
+								gn_fbox_load(function() { $(gn_el).trigger('click'); });
+							}
+						});
+					}
+					return;
+				}
 				$("a.fbox-media").fancybox({
 					arrows: true,
 					openEffect: 'elastic',
@@ -1272,6 +1309,27 @@
     		event.preventDefault();
     		SMColibri.toggleSB();
     	});
+
+	    /* Lecteur vidéo afterglow (420 Ko) : chargé à la demande, seulement quand une vidéo colibrism apparaît */
+	    var gn_afterglow_state = 0;
+	    function gn_load_afterglow() {
+	    	if (window.afterglow) {
+	    		window.afterglow.init();
+	    		return;
+	    	}
+	    	if (gn_afterglow_state == 1) {
+	    		return;
+	    	}
+	    	gn_afterglow_state = 1;
+	    	var gn_sc = document.createElement('script');
+	    	gn_sc.src = '{%config theme_url%}/statics/js/libs/afterglow/afterglow.min.js?v={%config version%}';
+	    	gn_sc.onload = function() {
+	    		gn_afterglow_state = 2;
+	    		if (window.afterglow) { window.afterglow.init(); }
+	    	};
+	    	gn_sc.onerror = function() { gn_afterglow_state = 0; };
+	    	document.head.appendChild(gn_sc);
+	    }
 
 	    setInterval(function() {
 
@@ -1320,7 +1378,7 @@
 							src: video_src
 						}));
 
-						afterglow.init();
+						gn_load_afterglow();
 					}
 				});
 			}

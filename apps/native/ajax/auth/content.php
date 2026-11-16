@@ -162,6 +162,7 @@ else if ($action == 'signup') {
                     'email'       => cl_text_secure($user_data_fileds["email"]),
                     'admin'       => $is_admin,
                     'active'      => '1',
+                    'index_privacy' => 'N',  # indexation par défaut désactivée (opt-in)
                     'em_code'     => $email_code,
                     'last_active' => time(),
                     'joined'      => time(),
@@ -272,6 +273,7 @@ else if($action == 'confirm_registration') {
                     'password'    => $password_hashed,
                     'email'       => cl_text_secure($acc_validation_data["email"]),
                     'active'      => '1',
+                    'index_privacy' => 'N',  # indexation par défaut désactivée (opt-in)
                     'admin'       => fetch_or_get($acc_validation_data["admin"], "0"),
                     'em_code'     => $email_code,
                     'last_active' => time(),

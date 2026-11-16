@@ -10,7 +10,8 @@
 $page = fetch_or_get($_GET['page'], 'terms');
 
 if (in_array($page, array('terms','privacy_policy','cookies_policy','about_us','faqs')) != true) {
-	cl_redirect("404");
+	cl_not_found();
+	return;
 }
 
 $page_titles         = array(

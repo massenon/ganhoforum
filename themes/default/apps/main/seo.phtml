@@ -47,6 +47,11 @@ if ($gn_pn == "guest") {
 else if ($gn_pn == "stat_pages") {
 	$gn_robots = "index,follow";
 }
+else if ($gn_pn == "educational" || $gn_pn == "comics") {
+	# Contenus éducatifs et bandes dessinées : publics, rédigés par l'association, indexables (jamais de données de membres)
+	$gn_robots  = "index,follow";
+	$gn_og_type = (not_empty(fetch_or_get($cl['edu_item'], array())) || not_empty(fetch_or_get($cl['bd_item'], array()))) ? "article" : "website";
+}
 else if (in_array($gn_pn, array("profile", "connections"))) {
 	$gn_hide   = true;
 	$gn_robots = "noindex,nofollow";
@@ -90,6 +95,16 @@ else {
 		$gn_desc = $gn_generic_desc;
 	}
 
+	# Discussion publique indexable : titre et description tirés du texte de la publication (sinon description générique du site, dupliquée sur chaque discussion)
+	$gn_excerpt = "";
+	if ($gn_pn == "thread" && $gn_robots == "index,follow" && isset($gn_tpost) && not_empty($gn_tpost)) {
+		$gn_excerpt = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags(stripcslashes(fetch_or_get($gn_tpost['text'], ""))), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+		if ($gn_excerpt !== "") {
+			$gn_desc  = $gn_excerpt;
+			$gn_title = trim(strip_tags(fetch_or_get($gn_tpost['owner']['name'], ""))) . " : " . $gn_excerpt;
+		}
+	}
+
 	if (mb_stripos($gn_title, "forum", 0, "UTF-8") === false && mb_strlen($gn_title . " | " . $gn_site, "UTF-8") <= 60) {
 		$gn_title .= " | " . $gn_site;
 	}
@@ -126,6 +141,21 @@ if (!$gn_hide && $gn_pn == "thread" && not_empty($cl["page_image"])) {
 	$gn_img_alt = "Image de la publication";
 }
 
+if (!$gn_hide && $gn_pn == "educational" && !empty($cl['edu_item']) && not_empty(fetch_or_get($cl['edu_item']['image_url'], ""))) {
+	$gn_img     = $cl['edu_item']['image_url'];
+	$gn_img_ok  = false;
+	$gn_img_alt = "Illustration de la fiche : " . gn_seo_clip(strip_tags($cl['edu_item']['title']), 90);
+}
+if (!$gn_hide && $gn_pn == "comics" && not_empty(fetch_or_get($cl['bd_item'], array()))) {
+	$gn_cov = fetch_or_get($cl['bd_item']['cover'], "");
+	$gn_cov = ($gn_cov !== "") ? cl_edu_image_url($gn_cov) : fetch_or_get($cl['bd_item']['panels_list'][0]['image_url'], "");
+	if ($gn_cov !== "") {
+		$gn_img     = $gn_cov;
+		$gn_img_ok  = false;
+		$gn_img_alt = "Première case de la bande dessinée : " . gn_seo_clip(strip_tags($cl['bd_item']['title']), 80);
+	}
+}
+
 $gn_theme_url = $gn_base . "/themes/" . $cl["config"]["theme"];
 ?>
 <title><?php if (not_empty($me['new_notifs'])) { echo "(" . intval($me['new_notifs']) . ") "; } echo gn_seo_e($gn_title); ?></title>
@@ -160,7 +190,7 @@ $gn_theme_url = $gn_base . "/themes/" . $cl["config"]["theme"];
 <meta name="twitter:image:alt" content="<?php echo gn_seo_e($gn_img_alt); ?>">
 <?php
 # ---- JSON-LD (public pages and the guest page only, no private data) -------
-if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread"):
+if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread" || $gn_pn == "educational" || $gn_pn == "comics"):
 	$gn_org_id  = $gn_base . "/#organization";
 	$gn_site_id = $gn_base . "/#website";
 	$gn_crumbs  = array(array("name" => $gn_site, "url" => $gn_base . "/"));
@@ -170,6 +200,15 @@ if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread"):
 	}
 	else if ($gn_pn == "stat_pages") {
 		$gn_crumbs[] = array("name" => gn_seo_clip(fetch_or_get($cl["page_title"], ""), 60), "url" => $gn_canon);
+	}
+	else if ($gn_pn == "educational" || $gn_pn == "comics") {
+		$gn_sec_name = ($gn_pn == "educational") ? "Contenus éducatifs" : "Bandes dessinées";
+		$gn_sec_url  = $gn_base . (($gn_pn == "educational") ? "/contenus-educatifs" : "/bandes-dessinees");
+		$gn_crumbs[] = array("name" => $gn_sec_name, "url" => $gn_sec_url);
+		$gn_detail   = ($gn_pn == "educational") ? fetch_or_get($cl['edu_item'], array()) : fetch_or_get($cl['bd_item'], array());
+		if (not_empty($gn_detail)) {
+			$gn_crumbs[] = array("name" => gn_seo_clip(strip_tags($gn_detail['title']), 60), "url" => $gn_canon);
+		}
 	}
 	else {
 		$gn_crumbs[] = array("name" => "Discussion", "url" => $gn_canon);
@@ -182,6 +221,8 @@ if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread"):
 	}
 
 	$gn_page_type = ($gn_pn == "stat_pages" && stripos($gn_canon, "about_us") !== false) ? "AboutPage" : "WebPage";
+	$gn_is_list = ($gn_pn == "educational" && empty($cl['edu_item'])) || ($gn_pn == "comics" && empty($cl['bd_item']));
+	if ($gn_is_list) { $gn_page_type = "CollectionPage"; }
 
 	$gn_ld = array(
 		"@context" => "https://schema.org",
@@ -225,6 +266,70 @@ if ($gn_pn == "guest" || $gn_pn == "stat_pages" || $gn_pn == "thread"):
 			)
 		)
 	);
+
+	# Contenus éducatifs / BD : liste (ItemList) ou fiche (Article / ComicStory)
+	if ($gn_pn == "educational" || $gn_pn == "comics") {
+		if ($gn_is_list) {
+			$gn_src  = ($gn_pn == "educational") ? fetch_or_get($cl['edu_all'], array()) : fetch_or_get($cl['bd_items'], array());
+			$gn_pos  = 0;
+			$gn_els  = array();
+			foreach (array_slice($gn_src, 0, 50) as $r) {
+				$gn_pos++;
+				$gn_els[] = array("@type" => "ListItem", "position" => $gn_pos, "url" => $r['url'], "name" => strip_tags($r['title']));
+			}
+			if ($gn_els) {
+				$gn_ld["@graph"][] = array("@type" => "ItemList", "@id" => $gn_canon . "#liste", "numberOfItems" => count($gn_els), "itemListElement" => $gn_els);
+			}
+		}
+		else if ($gn_pn == "educational") {
+			$gn_it  = $cl['edu_item'];
+			$gn_art = array(
+				"@type" => "Article", "@id" => $gn_canon . "#article",
+				"mainEntityOfPage" => array("@id" => $gn_canon . "#webpage"),
+				"headline" => gn_seo_clip(strip_tags($gn_it['title']), 110), "description" => $gn_desc, "inLanguage" => "fr-FR",
+				"image" => array($gn_img), "dateModified" => gmdate("c", intval($gn_it['updated_at'])),
+				"datePublished" => gmdate("c", intval(fetch_or_get($gn_it['created_at'], $gn_it['updated_at']))),
+				"articleSection" => fetch_or_get($gn_it['category_label'], ""), "isAccessibleForFree" => true,
+				"author" => array("@id" => $gn_org_id), "publisher" => array("@id" => $gn_org_id), "isPartOf" => array("@id" => $gn_site_id)
+			);
+			if (intval(fetch_or_get($gn_it['minutes'], 0)) > 0) {
+				$gn_art["timeRequired"] = "PT" . intval($gn_it['minutes']) . "M";
+			}
+			$gn_ld["@graph"][] = $gn_art;
+		}
+		else {
+			$gn_it = $cl['bd_item'];
+			$gn_ld["@graph"][] = array(
+				"@type" => "ComicStory", "@id" => $gn_canon . "#bd",
+				"mainEntityOfPage" => array("@id" => $gn_canon . "#webpage"),
+				"name" => gn_seo_clip(strip_tags($gn_it['title']), 110), "description" => $gn_desc, "inLanguage" => "fr-FR",
+				"image" => array($gn_img), "dateModified" => gmdate("c", intval($gn_it['updated_at'])),
+				"genre" => fetch_or_get($gn_it['category_label'], ""), "isAccessibleForFree" => true,
+				"author" => array("@id" => $gn_org_id), "publisher" => array("@id" => $gn_org_id), "isPartOf" => array("@id" => $gn_site_id)
+			);
+		}
+	}
+
+	# Discussion indexable : DiscussionForumPosting (texte, date, auteur public, compteurs)
+	if ($gn_pn == "thread" && !empty($gn_excerpt)) {
+		$gn_digits = function ($v) { return intval(preg_replace('/\D+/', '', (string) $v)); };
+		$gn_ld["@graph"][] = array(
+			"@type"         => "DiscussionForumPosting",
+			"@id"           => $gn_canon . "#post",
+			"mainEntityOfPage" => array("@id" => $gn_canon . "#webpage"),
+			"url"           => $gn_canon,
+			"headline"      => gn_seo_clip($gn_excerpt, 110),
+			"text"          => gn_seo_clip($gn_excerpt, 500),
+			"inLanguage"    => "fr-FR",
+			"datePublished" => gmdate("c", intval(fetch_or_get($gn_tpost['time_raw'], time()))),
+			"author"        => array("@type" => "Person", "name" => trim(strip_tags(fetch_or_get($gn_tpost['owner']['name'], "")))),
+			"isPartOf"      => array("@id" => $gn_site_id),
+			"commentCount"  => $gn_digits(fetch_or_get($gn_tpost['replys_count'], 0)),
+			"interactionStatistic" => array(
+				array("@type" => "InteractionCounter", "interactionType" => "https://schema.org/LikeAction", "userInteractionCount" => $gn_digits(fetch_or_get($gn_tpost['likes_count'], 0)))
+			)
+		);
+	}
 ?>
 <script type="application/ld+json"><?php echo str_replace("</", "<\\/", json_encode($gn_ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></script>
 <?php endif; ?>

@@ -120,6 +120,13 @@ function cl_link($path = "") {
     return (($path == "/") ? $url : "$url/$path");
 }
 
+/** Ressource publique introuvable : vraie page 404 (code HTTP 404, sans redirection). En SPA le client attend une redirection JSON. À suivre d'un `return;` dans le gestionnaire. */
+function cl_not_found() {
+    global $spa_load, $cl;
+    if ($spa_load == '1') { cl_redirect("404"); }
+    include_once(cl_full_path("apps/native/http/err404/content.php"));
+}
+
 function cl_redirect($link = '') {
     global $spa_load;
 
@@ -209,6 +216,30 @@ function cl_get_media($media = '', $is_upload = false){
         $media_url = cl_strf("%s/%s", $config['url'], $media);
         return $media_url;
     }
+}
+
+function cl_media_dims_attr($media = '') {
+    // Attributs width/height d'une image locale (réserve la place : évite le décalage de mise en page au chargement)
+    static $cache = array();
+    global $config;
+    if (empty($media) || !is_string($media) || (($config['as3_storage'] ?? '') == 'on')) {
+        return '';
+    }
+    if (isset($cache[$media])) {
+        return $cache[$media];
+    }
+    $cache[$media] = '';
+    if (strpos($media, '..') === false && preg_match('/\.(png|jpe?g|gif|webp)$/i', $media)) {
+        $path = cl_full_path(ltrim($media, '/'));
+        if (is_file($path)) {
+            $sz = @getimagesize($path);
+            if (!empty($sz[0]) && !empty($sz[1])) {
+                // src transparent 1x1 : sans src, l'image n'est pas un élément remplacé et width/height ne réservent rien
+                $cache[$media] = ' src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width="' . (int) $sz[0] . '" height="' . (int) $sz[1] . '"';
+            }
+        }
+    }
+    return $cache[$media];
 }
 
 function cl_get_media_placeholder($media = ""){

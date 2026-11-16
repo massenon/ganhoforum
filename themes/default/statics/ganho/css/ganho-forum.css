@@ -270,3 +270,6 @@ body[data-bg="dark"] .gn-chip-link.on{background:var(--cl-primary-color);border-
 .gn-pinned a:hover{color:var(--cl-primary-color);text-decoration:underline}
 .gn-pinned__k{display:inline-block;margin-right:8px;padding:2px 8px;border-radius:999px;background:var(--cl-input-bg-color);font:700 11px/1.4 var(--gn-font-head,Montserrat,sans-serif);color:var(--cl-primary-color)}
 .gn-pinned__urgence .gn-pinned__k{background:#C8200E;color:#fff}
+
+/* Performance : images de publication avec width/height (place réservée, pas de décalage) */
+.publication-image img.lozad[width][height]{height:auto;max-width:100%}

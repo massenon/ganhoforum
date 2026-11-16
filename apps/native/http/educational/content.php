@@ -11,7 +11,7 @@ $edu_slug = isset($_GET["slug"]) ? (string) $_GET["slug"] : "";
 
 if ($edu_slug !== "") {
 	$item = cl_edu_get_item_by_slug($edu_slug);
-	if (!$item) { cl_redirect("404"); }
+	if (!$item) { cl_not_found(); return; }
 	$cats = cl_edu_categories(); $aud = cl_edu_audiences();
 	$item["category_label"] = isset($cats[$item["category"]]) ? $cats[$item["category"]] : $item["category"];
 	$item["audience_label"] = isset($aud[$item["audience"]]) ? $aud[$item["audience"]] : "";

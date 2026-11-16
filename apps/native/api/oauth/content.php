@@ -136,6 +136,7 @@ else {
 		            'password'    => $password_hashed,
 		            'email'       => $user_data["email"],
 		            'active'      => '1',
+		            'index_privacy' => 'N',  # indexation par défaut désactivée (opt-in)
 		            'em_code'     => $email_code,
 		            'last_active' => time(),
 		            'joined'      => time(),
